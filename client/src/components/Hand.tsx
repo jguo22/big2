@@ -146,6 +146,7 @@ export function Hand({ cards, selectedIds, disabled, onToggle, onSelect }: HandP
           flex="0 0 auto"
           w="clamp(38px, 5.3vw, 72px)"
           ml={groupIndex === 0 ? '0' : { base: '-2px', md: '-4px' }}
+          zIndex={groupIndex}
         >
           {group.map((card, cardIndex) => (
             <Box
@@ -155,7 +156,7 @@ export function Hand({ cards, selectedIds, disabled, onToggle, onSelect }: HandP
               zIndex={cardIndex}
               w="full"
               aspectRatio="5 / 7"
-              mt={cardIndex === 0 ? '0' : { base: '-24px', md: '-44px' }}
+              mt={cardIndex === 0 ? '0' : '-105%'}
             >
               <PlayingCard
                 card={card}

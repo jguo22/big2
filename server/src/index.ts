@@ -1,4 +1,6 @@
 import { createServer } from 'node:http';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SnapshotStore } from './persistence/store.js';
 import { RoomService } from './rooms/room-service.js';
 import { attachGameSocket } from './transport/ws-server.js';
@@ -44,7 +46,7 @@ export async function start(port = PORT): Promise<{ port: number; close: () => P
   };
 }
 
-const isEntrypoint = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'));
+const isEntrypoint = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isEntrypoint) {
   const server = await start();
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {

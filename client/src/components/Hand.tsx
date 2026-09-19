@@ -23,22 +23,46 @@ export function Hand({ cards, selectedIds, disabled, onToggle }: HandProps) {
     );
   }
 
+  const rankGroups = cards.reduce<Card[][]>((groups, card) => {
+    const group = groups.at(-1);
+    if (group && group[0].rank === card.rank) {
+      group.push(card);
+    } else {
+      groups.push([card]);
+    }
+    return groups;
+  }, []);
+
   return (
-    <Flex role="group" aria-label="Your hand" justify="center" align="center" w="full">
-      {cards.map((card, index) => (
+    <Flex role="group" aria-label="Your hand" justify="center" align="flex-end" w="full">
+      {rankGroups.map((group, groupIndex) => (
         <Box
-          key={card.id}
+          key={group[0].rank}
+          position="relative"
+          display="flex"
+          flexDirection="column"
+          justifyContent="flex-end"
           flex="0 0 auto"
           w="clamp(38px, 5.3vw, 72px)"
-          ml={index === 0 ? '0' : { base: '-2px', md: '-4px' }}
-          zIndex={index}
+          ml={groupIndex === 0 ? '0' : { base: '-2px', md: '-4px' }}
         >
-          <PlayingCard
-            card={card}
-            selected={selectedIds.includes(card.id)}
-            disabled={disabled}
-            onToggle={onToggle}
-          />
+          {group.map((card, cardIndex) => (
+            <Box
+              key={card.id}
+              position="relative"
+              zIndex={cardIndex}
+              w="full"
+              aspectRatio="5 / 7"
+              mt={cardIndex === 0 ? '0' : { base: '-24px', md: '-44px' }}
+            >
+              <PlayingCard
+                card={card}
+                selected={selectedIds.includes(card.id)}
+                disabled={disabled}
+                onToggle={onToggle}
+              />
+            </Box>
+          ))}
         </Box>
       ))}
     </Flex>

@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #142f2c;
+  background: #f8f3e8;
+  font-family: 'Manrope', ui-sans-serif, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, input { font: inherit; }
+
+.felt-pattern {
+  background-color: #18534d;
+  background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px), radial-gradient(rgba(0,0,0,.08) 1px, transparent 1px);
+  background-position: 0 0, 12px 12px;
+  background-size: 24px 24px;
+}
+
+.card-shadow { box-shadow: 0 8px 20px rgba(7, 39, 36, .22), 0 2px 4px rgba(7, 39, 36, .16); }
+
+@keyframes float-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-float-in { animation: float-in .45s ease-out both; }

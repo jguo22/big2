@@ -31,6 +31,10 @@ export interface MatchState {
   readonly passedSeats: readonly number[];
   readonly history: readonly PlayRecord[];
   readonly roundIndex: number;
+  /** Seat that opened this round; also the boundary for clearing displayed actions. */
+  readonly roundLeaderSeat: number;
+  readonly visiblePlays: readonly PlayRecord[];
+  readonly visiblePassedSeats: readonly number[];
   /** Card the very first play of the match must contain, or `null` if none applies. */
   readonly startingCardId: string | null;
   /** Cards left out of play because the deck did not divide evenly. */
@@ -61,6 +65,8 @@ export type ActionResult = { ok: true; state: MatchState } | { ok: false; reject
 
 /** Match state as one player is allowed to see it. */
 export interface PublicMatchState {
+  readonly visiblePlays: readonly PlayRecord[];
+  readonly visiblePassedSeats: readonly number[];
   readonly turnSeat: number;
   readonly currentPlay: PlayRecord | null;
   readonly passedSeats: readonly number[];
@@ -105,6 +111,9 @@ export function createMatch(playerIds: readonly string[], rng?: Rng): MatchState
     passedSeats: [],
     history: [],
     roundIndex: 0,
+    roundLeaderSeat: seat,
+    visiblePlays: [],
+    visiblePassedSeats: [],
     startingCardId,
     undealt,
     winnerId: null,
@@ -180,6 +189,7 @@ export function playCards(state: MatchState, playerId: string, cardIds: readonly
       currentPlay: record,
       passedSeats: [],
       history: [...state.history, record],
+      ...tableDisplay(state, nextSeat(state, seat), record, remaining.length === 0),
       turnSeat: nextSeat(state, seat),
       winnerId: remaining.length === 0 ? playerId : null,
     },
@@ -219,11 +229,39 @@ export function pass(state: MatchState, playerId: string): ActionResult {
         passedSeats: [],
         roundIndex: state.roundIndex + 1,
         turnSeat: state.currentPlay.seat,
+        roundLeaderSeat: state.currentPlay.seat,
+        visiblePlays: [],
+        visiblePassedSeats: [],
       },
     };
   }
 
-  return { ok: true, state: { ...state, passedSeats, turnSeat: nextSeat(state, seat) } };
+  return {
+    ok: true,
+    state: {
+      ...state,
+      passedSeats,
+      turnSeat: nextSeat(state, seat),
+      ...tableDisplay(state, nextSeat(state, seat), null),
+    },
+  };
+}
+
+/** Keep each seat's action until the turn completes a lap back to the round leader. */
+function tableDisplay(state: MatchState, turnSeat: number, play: PlayRecord | null, matchOver = false) {
+  const currentPlay = play ?? state.currentPlay;
+  if (!matchOver && turnSeat === state.roundLeaderSeat) {
+    // The active hand still needs to be visible so the leader knows what to beat.
+    return { visiblePlays: currentPlay ? [currentPlay] : [], visiblePassedSeats: [] };
+  }
+  return {
+    visiblePlays: play
+      ? [...state.visiblePlays.filter((previous) => previous.seat !== play.seat), play]
+      : state.visiblePlays,
+    visiblePassedSeats: play
+      ? state.visiblePassedSeats.filter((seat) => seat !== play.seat)
+      : [...state.visiblePassedSeats, state.turnSeat],
+  };
 }
 
 /**
@@ -242,6 +280,8 @@ export function redactMatch(state: MatchState, viewerId: string): PublicMatchSta
   }
   return {
     turnSeat: state.turnSeat,
+    visiblePlays: state.visiblePlays,
+    visiblePassedSeats: state.visiblePassedSeats,
     currentPlay: state.currentPlay,
     passedSeats: state.passedSeats,
     history: state.history,

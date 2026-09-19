@@ -49,6 +49,18 @@ export class RoomService {
     for (const room of snapshot.rooms) {
       for (const player of room.players) player.connected = false;
       room.settings = sanitizeSettings(room.settings);
+      // Older snapshots predate the separate table display state.
+      if (room.match) {
+        const match = room.match;
+        room.match = {
+          ...match,
+          roundLeaderSeat: match.roundLeaderSeat
+            ?? match.history.find((play) => play.roundIndex === match.roundIndex)?.seat
+            ?? match.turnSeat,
+          visiblePlays: match.visiblePlays ?? (match.currentPlay ? [match.currentPlay] : []),
+          visiblePassedSeats: match.visiblePassedSeats ?? match.passedSeats,
+        };
+      }
       this.rooms.set(room.code, room);
       // A snapshot may have been taken while a bot was on turn; without this
       // the restored match would sit wedged on that seat forever.

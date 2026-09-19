@@ -107,7 +107,7 @@ export function GameScreen({ room }: GameScreenProps) {
             player={player}
             position={layout[index] ?? 'top'}
             isTurn={player.seat === match.turnSeat && match.winnerId === null}
-            hasPassed={match.passedSeats.includes(player.seat)}
+            hasPassed={match.visiblePassedSeats.includes(player.seat)}
           />
         ))}
 
@@ -123,7 +123,7 @@ export function GameScreen({ room }: GameScreenProps) {
         >
           <TableArea
             match={match}
-            passedSeats={match.passedSeats}
+            passedSeats={match.visiblePassedSeats}
             playerPositions={new Map([
               ...(you ? [[you.id, 'bottom' as const] as const] : []),
               ...opponents.map((player, index) => [player.id, layout[index] ?? 'top'] as const),

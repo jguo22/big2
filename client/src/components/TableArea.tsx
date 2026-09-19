@@ -13,16 +13,12 @@ export interface TableAreaProps {
   isYourTurn: boolean;
 }
 
-/** How many recent plays stay visible behind the current one. */
-const VISIBLE_PLAYS = 3;
-
 /**
- * The centre of the table. The current play sits at full size with the two
- * before it stacked behind, scaled down and faded, so the round reads as a
- * pile rather than a list.
+ * Each seat's plays stay visible until the turn returns to the round leader.
+ * The active hand remains at full size so players can see what they must beat.
  */
 export function TableArea({ match, passedSeats, playerPositions, seatPositions, isYourTurn }: TableAreaProps) {
-  const recent = match.history.slice(-VISIBLE_PLAYS);
+  const recent = match.visiblePlays;
 
   return (
     <Box
@@ -73,12 +69,12 @@ function PassMarker({ position }: { position: PlayPosition }) {
       display="flex"
       alignItems="center"
       justifyContent="center"
-      w="clamp(38px, 5.3vw, 72px)"
-      aspectRatio="5 / 7"
-      borderWidth="1px"
-      borderColor="whiteAlpha.500"
+      px={{ base: '12px', md: '18px' }}
+      py={{ base: '8px', md: '10px' }}
+      bg="#2563eb"
+      zIndex={4}
       borderRadius="3px"
-      color="whiteAlpha.800"
+      color="white"
       fontSize="clamp(9px, 1.3vw, 16px)"
       fontWeight="800"
       letterSpacing=".08em"

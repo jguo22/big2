@@ -118,7 +118,7 @@ describe('online room flow', () => {
     const startingCardId = starterRoom.match!.startingCardId!;
 
     starter.send({ type: 'play', requestId: 'p1', cardIds: [startingCardId] });
-    const afterPlay = await starter.waitForRoom((room) => room.match?.currentPlay !== null);
+    const afterPlay = await starter.waitForRoom((room) => room.match?.currentPlay != null);
     expect(afterPlay.match!.currentPlay!.cards[0].id).toBe(startingCardId);
     expect(afterPlay.match!.yourHand).toHaveLength(25);
 

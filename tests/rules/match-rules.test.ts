@@ -1,4 +1,4 @@
-import { botMove, Card, cardValue, createMatch, MatchState, pass, playCards, redactMatch } from '@bigtwo/rules';
+import { botMove, Card, cardValue, createMatch, MatchState, parseCardId, pass, playCards, redactMatch } from '@bigtwo/rules';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { playerAt, seededRng } from '../helpers/simulate.js';
 
@@ -147,6 +147,41 @@ describe('turn and play validation', () => {
 });
 
 describe('rounds', () => {
+  it('retains plays and passes until the round leader acts again, keeping the hand to beat', () => {
+    let state: MatchState = {
+      ...createMatch(PLAYERS, seededRng(1)),
+      turnSeat: 0,
+      roundLeaderSeat: 0,
+      hands: Object.fromEntries([
+        ['p0', ['3D', '7D', 'JD']],
+        ['p1', ['4D', '8D', 'QD']],
+        ['p2', ['5D', '9D', 'KD']],
+        ['p3', ['6D', 'TD', 'AD']],
+      ].map(([id, cards]) => [id, (cards as string[]).map((id) => parseCardId(id)!)])),
+    };
+    state = expectOk(playCards(state, 'p0', ['3D']));
+    state = expectOk(pass(state, 'p1'));
+    state = expectOk(playCards(state, 'p2', ['5D']));
+    expect(state.visiblePlays.map((play) => play.playerId)).toEqual(['p0', 'p2']);
+    expect(state.visiblePassedSeats).toEqual([1]);
+    expect(redactMatch(state, 'p3').visiblePassedSeats).toEqual([1]);
+
+    state = expectOk(pass(state, 'p3'));
+    expect(state.turnSeat).toBe(0);
+    expect(state.visiblePlays).toEqual([state.currentPlay]);
+    expect(state.visiblePassedSeats).toEqual([]);
+    // Display clearing must not reset the consecutive passes used by the rules.
+    expect(state.passedSeats).toEqual([3]);
+
+    state = expectOk(playCards(state, 'p0', ['7D']));
+    state = expectOk(playCards(state, 'p1', ['8D']));
+    state = expectOk(playCards(state, 'p2', ['9D']));
+    expect(state.visiblePlays.map((play) => play.playerId)).toEqual(['p0', 'p1', 'p2']);
+    state = expectOk(playCards(state, 'p3', ['TD']));
+    expect(state.visiblePlays).toEqual([state.currentPlay]);
+    expect(state.visiblePassedSeats).toEqual([]);
+  });
+
   it('clears the table and returns the lead when everyone else passes', () => {
     let state = createMatch(PLAYERS, seededRng(1));
     const leader = playerAt(state, state.turnSeat);
@@ -158,6 +193,9 @@ describe('rounds', () => {
     expect(state.currentPlay).toBeNull();
     expect(state.passedSeats).toEqual([]);
     expect(state.roundIndex).toBe(1);
+    expect(state.visiblePlays).toEqual([]);
+    expect(state.visiblePassedSeats).toEqual([]);
+    expect(state.roundLeaderSeat).toBe(state.turnSeat);
     expect(playerAt(state, state.turnSeat)).toBe(leader);
   });
 });

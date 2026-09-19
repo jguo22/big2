@@ -34,6 +34,8 @@ export function ActionBar({
 }: ActionBarProps) {
   const blocked = Boolean(blockedReason) && isYourTurn && selectionCount > 0;
 
+  if (!isYourTurn) return null;
+
   return (
     <Flex direction="column" align="center" textAlign="center">
       {showPlayerName && (

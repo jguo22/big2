@@ -1,10 +1,14 @@
-import { PlayRecord, PublicMatchState, PublicPlayer } from '@bigtwo/rules';
-import { Box, Flex, Stack, Text } from '@chakra-ui/react';
+import { PlayRecord, PublicMatchState } from '@bigtwo/rules';
+import { Box, Flex, Text } from '@chakra-ui/react';
 import { PlayingCard } from './PlayingCard.js';
+
+export type PlayPosition = 'top' | 'left' | 'right' | 'bottom';
 
 export interface TableAreaProps {
   match: PublicMatchState;
-  players: readonly PublicPlayer[];
+  passedSeats: readonly number[];
+  playerPositions: ReadonlyMap<string, PlayPosition>;
+  seatPositions: ReadonlyMap<number, PlayPosition>;
   /** True when the local player is the one to act. */
   isYourTurn: boolean;
 }
@@ -17,75 +21,98 @@ const VISIBLE_PLAYS = 3;
  * before it stacked behind, scaled down and faded, so the round reads as a
  * pile rather than a list.
  */
-export function TableArea({ match, players, isYourTurn }: TableAreaProps) {
-  const nameOf = (playerId: string) => players.find((p) => p.id === playerId)?.name ?? 'Someone';
+export function TableArea({ match, passedSeats, playerPositions, seatPositions, isYourTurn }: TableAreaProps) {
   const recent = match.history.slice(-VISIBLE_PLAYS);
-  const leadName = match.currentPlay ? nameOf(match.currentPlay.playerId) : null;
 
   return (
-    <Stack
+    <Box
       as="section"
       aria-label="Table"
       aria-live="polite"
-      gap="14px"
+      position="relative"
       w="full"
-      px={{ base: '12px', md: '30px' }}
-      align="center"
+      h="full"
+      minH={{ base: '112px', md: '148px' }}
     >
-      <Text
-        color="whiteAlpha.700"
-        fontSize="10px"
-        fontWeight="800"
-        letterSpacing=".16em"
-        textTransform="uppercase"
-      >
-        {leadName ? `${leadName}'s play` : 'The table is ready'}
-      </Text>
-
       {match.currentPlay ? (
-        <Flex justify="center" align="flex-end" h={{ base: '112px', md: '148px' }} w="full">
+        <Box position="absolute" inset="0">
           {recent.map((play, index) => (
             <StackedPlay
               key={`${play.playerId}-${play.roundIndex}-${index}`}
               play={play}
-              name={nameOf(play.playerId)}
+              position={playerPositions.get(play.playerId) ?? 'top'}
               isCurrent={index === recent.length - 1}
-              isFirst={index === 0}
               depth={index}
             />
           ))}
-        </Flex>
+          {passedSeats.map((seat) => (
+            <PassMarker key={seat} position={seatPositions.get(seat) ?? 'top'} />
+          ))}
+        </Box>
       ) : (
-        <Text color="whiteAlpha.500" fontSize="13px" textAlign="center">
+        <Text position="absolute" inset="0" display="flex" alignItems="center" justifyContent="center" color="whiteAlpha.500" fontSize="13px" textAlign="center">
           {isYourTurn ? 'Choose cards from your hand to lead' : 'Waiting for the next play'}
         </Text>
       )}
-    </Stack>
+    </Box>
+  );
+}
+
+function PassMarker({ position }: { position: PlayPosition }) {
+  const anchor = {
+    top: { top: '8px', left: '50%', transform: 'translateX(-50%)' },
+    left: { top: '50%', left: '8px', transform: 'translateY(-50%)' },
+    right: { top: '50%', right: '8px', transform: 'translateY(-50%)' },
+    bottom: { bottom: '8px', left: '50%', transform: 'translateX(-50%)' },
+  }[position];
+
+  return (
+    <Box
+      position="absolute"
+      {...anchor}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      w="clamp(38px, 5.3vw, 72px)"
+      aspectRatio="5 / 7"
+      borderWidth="1px"
+      borderColor="whiteAlpha.500"
+      borderRadius="3px"
+      color="whiteAlpha.800"
+      fontSize="clamp(9px, 1.3vw, 16px)"
+      fontWeight="800"
+      letterSpacing=".08em"
+    >
+      PASS
+    </Box>
   );
 }
 
 interface StackedPlayProps {
   play: PlayRecord;
-  name: string;
+  position: PlayPosition;
   isCurrent: boolean;
-  isFirst: boolean;
   depth: number;
 }
 
-function StackedPlay({ play, name, isCurrent, isFirst, depth }: StackedPlayProps) {
+function StackedPlay({ play, position, isCurrent, depth }: StackedPlayProps) {
+  const anchor = {
+    top: { top: '8px', left: '50%', transform: 'translateX(-50%)' },
+    left: { top: '50%', left: '8px', transform: 'translateY(-50%)' },
+    right: { top: '50%', right: '8px', transform: 'translateY(-50%)' },
+    bottom: { bottom: '8px', left: '50%', transform: 'translateX(-50%)' },
+  }[position];
+
   return (
     <Box
-      position="relative"
-      ml={isFirst ? '0' : { base: '-28px', md: '-42px' }}
+      position="absolute"
+      {...anchor}
       zIndex={depth}
-      transform={`translateY(${isCurrent ? '0' : '12px'}) scale(${isCurrent ? 1 : 0.82})`}
+      transform={`${anchor.transform} translateY(${isCurrent ? '0' : '12px'}) scale(${isCurrent ? 1 : 0.82})`}
       transformOrigin="bottom center"
       opacity={isCurrent ? 1 : 0.48}
       transition="transform .2s, opacity .2s"
     >
-      <Text textAlign="center" color="whiteAlpha.700" fontSize="10px" mb="4px">
-        {name}
-      </Text>
       <Flex justify="center" h={{ base: '76px', md: '100px' }}>
         {play.cards.map((card, index) => (
           <Box key={card.id} ml={index === 0 ? '0' : { base: '-12px', md: '-17px' }} zIndex={index}>

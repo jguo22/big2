@@ -65,7 +65,7 @@ export function OpponentSeat({ player, position, isTurn, hasPassed }: OpponentSe
         </Text>
       </Flex>
       <Text fontSize="10px" opacity=".6">
-        {hasPassed ? 'passed' : `${player.handCount} card${player.handCount === 1 ? '' : 's'}`}
+        {player.handCount} card{player.handCount === 1 ? '' : 's'}
       </Text>
     </Box>
   );

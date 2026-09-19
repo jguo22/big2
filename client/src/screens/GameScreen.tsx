@@ -104,7 +104,19 @@ export function GameScreen({ room }: GameScreenProps) {
           borderColor="whiteAlpha.200"
           borderRadius="24px"
         >
-          <TableArea match={match} players={room.players} isYourTurn={isYourTurn} />
+          <TableArea
+            match={match}
+            passedSeats={match.passedSeats}
+            playerPositions={new Map([
+              ...(you ? [[you.id, 'bottom' as const] as const] : []),
+              ...opponents.map((player, index) => [player.id, layout[index] ?? 'top'] as const),
+            ])}
+            seatPositions={new Map([
+              ...(you ? [[you.seat, 'bottom' as const] as const] : []),
+              ...opponents.map((player, index) => [player.seat, layout[index] ?? 'top'] as const),
+            ])}
+            isYourTurn={isYourTurn}
+          />
         </Flex>
 
         <Box

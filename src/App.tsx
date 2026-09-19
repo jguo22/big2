@@ -17,27 +17,26 @@ import {
   useDisclosure,
   VStack,
 } from '@chakra-ui/react'
+import { createMatch, passTurn, playCards, type Card as GameCard, type MatchState, type Player } from './game'
 
 type Page = 'title' | 'rooms' | 'game'
-type Suit = 'spades' | 'hearts' | 'clubs' | 'diamonds'
-type Card = { id: string; rank: string; suit: Suit; symbol: string; red?: boolean }
+type Card = GameCard
 type Room = { name: string; players: number; password?: boolean }
 
-const suitSymbols: Record<Suit, string> = { spades: '♠', hearts: '♥', clubs: '♣', diamonds: '♦' }
 const cards: Card[] = [
-  { id: '3d', rank: '3', suit: 'diamonds', symbol: '♦', red: true },
-  { id: '5s', rank: '5', suit: 'spades', symbol: '♠' },
-  { id: '7h', rank: '7', suit: 'hearts', symbol: '♥', red: true },
-  { id: '8c', rank: '8', suit: 'clubs', symbol: '♣' },
-  { id: '10d', rank: '10', suit: 'diamonds', symbol: '♦', red: true },
-  { id: 'jh', rank: 'J', suit: 'hearts', symbol: '♥', red: true },
-  { id: 'qs', rank: 'Q', suit: 'spades', symbol: '♠' },
-  { id: 'kc', rank: 'K', suit: 'clubs', symbol: '♣' },
-  { id: 'as', rank: 'A', suit: 'spades', symbol: '♠' },
-  { id: '2h', rank: '2', suit: 'hearts', symbol: '♥', red: true },
-  { id: '9d', rank: '9', suit: 'diamonds', symbol: '♦', red: true },
-  { id: '4c', rank: '4', suit: 'clubs', symbol: '♣' },
-  { id: '6s', rank: '6', suit: 'spades', symbol: '♠' },
+  { id: '3-diamonds', rank: '3', suit: 'diamonds' },
+  { id: '5s', rank: '5', suit: 'spades' },
+  { id: '7h', rank: '7', suit: 'hearts' },
+  { id: '8c', rank: '8', suit: 'clubs' },
+  { id: '10d', rank: '10', suit: 'diamonds' },
+  { id: 'jh', rank: 'J', suit: 'hearts' },
+  { id: 'qs', rank: 'Q', suit: 'spades' },
+  { id: 'kc', rank: 'K', suit: 'clubs' },
+  { id: 'as', rank: 'A', suit: 'spades' },
+  { id: '2h', rank: '2', suit: 'hearts' },
+  { id: '9d', rank: '9', suit: 'diamonds' },
+  { id: '4c', rank: '4', suit: 'clubs' },
+  { id: '6s', rank: '6', suit: 'spades' },
 ]
 
 const rooms: Room[] = [
@@ -51,6 +50,7 @@ function App() {
   const [roomName, setRoomName] = useState('')
   const [roomPassword, setRoomPassword] = useState('')
   const [selected, setSelected] = useState<string[]>([])
+  const [match, setMatch] = useState<MatchState>(() => createDemoMatch())
   const [roomToJoin, setRoomToJoin] = useState<Room | null>(null)
   const [joinedRoom, setJoinedRoom] = useState('Sunday night cards')
   const createRoom = useDisclosure()
@@ -87,10 +87,21 @@ function App() {
         <GamePage
           roomName={joinedRoom}
           playerName={playerName || 'You'}
+          match={match}
           selected={selected}
           onBack={() => setPage('rooms')}
           onToggle={(id) => setSelected((current) => current.includes(id) ? current.filter((cardId) => cardId !== id) : [...current, id])}
-          onPlay={() => setSelected([])}
+          onPlay={() => {
+            const result = playCards(match, 'you', selected)
+            if (result.ok) {
+              setMatch(result.state)
+              setSelected([])
+            }
+          }}
+          onPass={() => {
+            const nextState = passTurn(match, 'you')
+            if (nextState) setMatch(nextState)
+          }}
         />
       )}
 
@@ -124,6 +135,16 @@ function App() {
   )
 }
 
+function createDemoMatch() {
+  const players: Player[] = [
+    { id: 'you', name: 'You', hand: cards, connected: true },
+    { id: 'mina', name: 'Mina', hand: [], connected: true },
+    { id: 'owen', name: 'Owen', hand: [], connected: true },
+    { id: 'sofia', name: 'Sofia', hand: [], connected: true },
+  ]
+  return createMatch(players)
+}
+
 function Field({ label, value, onChange, placeholder, type = 'text' }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; type?: string }) {
   return <Box><Text fontSize="11px" fontWeight="800" letterSpacing=".12em" textTransform="uppercase" mb="8px" color="ink" opacity=".65">{label}</Text><Input value={value} onChange={(event) => onChange(event.target.value)} type={type} placeholder={placeholder} bg="whiteAlpha.700" border="1px solid" borderColor="blackAlpha.200" borderRadius="12px" h="48px" _focus={{ borderColor: 'coral', boxShadow: '0 0 0 1px #e86e4b' }} /></Box>
 }
@@ -143,26 +164,19 @@ function RoomsPage({ onBack, onCreate, onRoom }: { onBack: () => void; onCreate:
   return <Box minH="100vh" bg="cream" px={{ base: '20px', md: '64px' }} py={{ base: '28px', md: '52px' }}><Flex maxW="900px" mx="auto" justify="space-between" align="center" mb="58px"><Button variant="ghost" onClick={onBack} color="ink" fontSize="24px" px="0" _hover={{ bg: 'transparent', transform: 'translateX(-3px)' }} transition="all .2s">←</Button><Text fontSize="12px" fontWeight="800" letterSpacing=".18em" textTransform="uppercase" opacity=".55">Lobby</Text><Button onClick={onCreate} aria-label="Create a room" w="44px" h="44px" minW="44px" borderRadius="12px" bg="ink" color="white" fontSize="28px" fontWeight="400" lineHeight="1" _hover={{ bg: '#224b46' }}>+</Button></Flex><Box maxW="900px" mx="auto"><Heading fontFamily="heading" fontWeight="400" fontSize={{ base: '58px', md: '76px' }} lineHeight=".95" mb="10px">Rooms</Heading><Text color="ink" opacity=".6" mb="34px">Find a table and pull up a chair.</Text><VStack spacing="12px" align="stretch">{rooms.map((room, index) => <Button key={room.name} onClick={() => onRoom(room)} justifyContent="space-between" alignItems="center" h="86px" px={{ base: '18px', md: '28px' }} bg="whiteAlpha.700" border="1px solid" borderColor="blackAlpha.100" borderRadius="18px" color="ink" fontWeight="600" _hover={{ bg: 'white', transform: 'translateX(4px)', boxShadow: '0 10px 25px rgba(20,47,44,.08)' }} transition="all .2s" className="animate-float-in" style={{ animationDelay: `${index * 80}ms` }}><Flex align="center" gap="16px"><Box w="9px" h="9px" borderRadius="full" bg={room.players === 4 ? 'coral' : '#7cae87'} /><Box textAlign="left"><Text fontSize={{ base: '14px', md: '16px' }}>{room.name}</Text><Text fontSize="11px" opacity=".5" mt="3px">{room.players} of 4 players {room.password && '· Private'}</Text></Box></Flex><Text fontSize="22px" fontWeight="400" opacity=".5">→</Text></Button>)}</VStack></Box></Box>
 }
 
-function GamePage({ roomName, playerName, selected, onBack, onToggle, onPlay }: { roomName: string; playerName: string; selected: string[]; onBack: () => void; onToggle: (id: string) => void; onPlay: () => void }) {
-  const selectedCards = cards.filter((card) => selected.includes(card.id))
-  const validCombo = isValidCombo(selectedCards)
-  return <Box minH="100vh" position="relative" className="felt-pattern"><Flex justify="flex-end" position="absolute" top={{ base: '14px', md: '24px' }} left={{ base: '18px', md: '32px' }} right={{ base: '18px', md: '32px' }} zIndex="5"><Button onClick={onBack} variant="ghost" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: 'whiteAlpha.200' }}>Exit</Button></Flex><Box w="100%" h="100vh" minH="560px" position="relative" overflow="hidden"><PlayerSeat position="top" name="Mina" count="11 cards" cards={5} /><PlayerSeat position="left" name="Owen" count="9 cards" cards={4} /><PlayerSeat position="right" name="Sofia" count="13 cards" cards={6} /><Box position="absolute" inset="22% 13% 31%" zIndex="1" pointerEvents="none" border="1px solid" borderColor="whiteAlpha.200" borderRadius="24px" display="flex" alignItems="center" justifyContent="center"><VStack spacing="10px"><Box px="14px" py="7px" bg="blackAlpha.200" borderRadius="999px"><Text fontSize="10px" fontWeight="800" letterSpacing=".14em" textTransform="uppercase" color="whiteAlpha.800">Mina's turn</Text></Box><Text color="whiteAlpha.500" fontSize="13px">Play a higher hand or pass</Text></VStack></Box><Box position="absolute" top="80%" left="50%" transform="translate(-50%, -50%)" w="74vw" zIndex="0"><Hand cards={cards} selected={selected} onToggle={onToggle} /></Box><Box position="absolute" bottom="18px" left="50%" transform="translateX(-50%)" textAlign="center"><Text color="white" fontWeight="800" fontSize="13px" mb="6px">{playerName}</Text><Flex justify="center" gap="8px"><Button onClick={onPlay} isDisabled={!validCombo} h="40px" px="24px" borderRadius="999px" bg="coral" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: '#d85e3d' }}>Play {selected.length > 0 && `(${selected.length})`}</Button><Button h="40px" px="22px" borderRadius="999px" bg="whiteAlpha.200" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: 'whiteAlpha.300' }}>Pass</Button></Flex></Box></Box></Box>
+function GamePage({ roomName, playerName, match, selected, onBack, onToggle, onPlay, onPass }: { roomName: string; playerName: string; match: MatchState; selected: string[]; onBack: () => void; onToggle: (id: string) => void; onPlay: () => void; onPass: () => void }) {
+  const you = match.players.find((player) => player.id === 'you')
+  const canAct = match.currentPlayerId === 'you' && !match.winnerId
+  return <Box minH="100vh" position="relative" className="felt-pattern"><Flex justify="flex-end" position="absolute" top={{ base: '14px', md: '24px' }} left={{ base: '18px', md: '32px' }} right={{ base: '18px', md: '32px' }} zIndex="5"><Button onClick={onBack} variant="ghost" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: 'whiteAlpha.200' }}>Exit</Button></Flex><Box w="100%" h="100vh" minH="560px" position="relative" overflow="hidden"><PlayerSeat position="top" name="Mina" count="11 cards" cards={5} /><PlayerSeat position="left" name="Owen" count="9 cards" cards={4} /><PlayerSeat position="right" name="Sofia" count="13 cards" cards={6} /><Box position="absolute" inset="18% 10% 31%" zIndex="1" border="1px solid" borderColor="whiteAlpha.200" borderRadius="24px" display="flex" alignItems="center" justifyContent="center"><PlayedArea plays={match.playedHands} currentPlayerId={match.currentPlayerId} /></Box><Box position="absolute" top="80%" left="50%" transform="translate(-50%, -50%)" w="74vw" zIndex="0"><Hand cards={you?.hand ?? []} selected={selected} onToggle={onToggle} /></Box><Box position="absolute" bottom="18px" left="50%" transform="translateX(-50%)" textAlign="center"><Text color="white" fontWeight="800" fontSize="13px" mb="6px">{playerName} · {you?.hand.length ?? 0} cards</Text><Flex justify="center" gap="8px"><Button onClick={onPlay} isDisabled={!canAct || selected.length === 0} h="40px" px="24px" borderRadius="999px" bg="coral" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: '#d85e3d' }}>Play {selected.length > 0 && `(${selected.length})`}</Button><Button onClick={onPass} isDisabled={!canAct || !match.currentPlay} h="40px" px="22px" borderRadius="999px" bg="whiteAlpha.200" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: 'whiteAlpha.300' }}>Pass</Button></Flex></Box></Box></Box>
 }
 
-function isValidCombo(hand: Card[]) {
-  if (hand.length === 0) return false
-  const rankCounts = hand.reduce<Record<string, number>>((counts, card) => ({ ...counts, [card.rank]: (counts[card.rank] ?? 0) + 1 }), {})
-  const counts = Object.values(rankCounts).sort((a, b) => b - a)
-  if (hand.length === 1) return true
-  if (hand.length === 2) return counts[0] === 2
-  if (hand.length === 3) return counts[0] === 3
-  if (hand.length !== 5) return false
+function PlayedArea({ plays, currentPlayerId }: { plays: MatchState['playedHands']; currentPlayerId: string }) {
+  const latestPlays = plays.slice(-3)
+  return <VStack spacing="14px" w="full" px={{ base: '12px', md: '30px' }}><Text color="whiteAlpha.700" fontSize="10px" fontWeight="800" letterSpacing=".16em" textTransform="uppercase">{latestPlays.length > 0 ? `${latestPlays.at(-1)?.playerName}'s play` : 'The table is ready'}</Text>{latestPlays.length > 0 ? <Flex justify="center" align="end" h={{ base: '112px', md: '148px' }} w="full">{latestPlays.map((played, playIndex) => <Box key={`${played.playerId}-${playIndex}`} position="relative" ml={playIndex === 0 ? '0' : { base: '-28px', md: '-42px' }} zIndex={playIndex} transform={`translateY(${playIndex === latestPlays.length - 1 ? '0' : '12px'}) scale(${playIndex === latestPlays.length - 1 ? 1 : .82})`} opacity={playIndex === latestPlays.length - 1 ? 1 : .48} transformOrigin="bottom center"><Text textAlign="center" color="whiteAlpha.700" fontSize="10px" mb="4px">{played.playerName}</Text><PlayedHand cards={played.combination.cards} /></Box>)}</Flex> : <Text color="whiteAlpha.500" fontSize="13px">{currentPlayerId === 'you' ? 'Choose cards from your hand to lead' : 'Waiting for the next play'}</Text>}</VStack>
+}
 
-  const sameSuit = hand.every((card) => card.suit === hand[0].suit)
-  const rankOrder = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
-  const values = hand.map((card) => rankOrder.indexOf(card.rank)).sort((a, b) => a - b)
-  const straight = new Set(values).size === 5 && values.every((value, index) => index === 0 || value === values[index - 1] + 1)
-  return straight || sameSuit || (counts[0] === 3 && counts[1] === 2) || counts[0] === 4
+function PlayedHand({ cards: hand }: { cards: GameCard[] }) {
+  return <Flex justify="center" h={{ base: '76px', md: '100px' }}>{hand.map((card, index) => <CardFace key={card.id} card={card} played index={index} />)}</Flex>
 }
 
 function PlayerSeat({ position, name, count, cards: cardCount }: { position: 'top' | 'left' | 'right'; name: string; count: string; cards: number }) {
@@ -176,16 +190,21 @@ function Hand({ cards: hand, selected, onToggle }: { cards: Card[]; selected: st
   return <Flex justify="center" align="center" h="auto">
     {hand.map((card, index) => {
       const isSelected = selected.includes(card.id)
-      const cardColor = card.red ? 'coral' : 'ink'
       return <Box key={card.id} as="button" onClick={() => onToggle(card.id)} aria-label={`${card.rank} of ${card.suit}`} position="relative" overflow="hidden" borderRadius="3px" flex="0 0 auto" w="5.3vw" aspectRatio="5 / 7" ml={index === 0 ? '0' : { base: '-2px', md: '-4px' }} transition="none">
-        <Box h="100%" w="100%" bg="#fffdf6" border="1px solid" borderColor="blackAlpha.500" borderRadius="3px" position="relative" overflow="hidden">
-          <Text position="absolute" top=".6vw" left=".6vw" fontFamily="heading" fontSize="1.65vw" lineHeight=".9" color={cardColor}>{card.rank}</Text>
-          <Text position="absolute" inset="0" display="flex" alignItems="center" justifyContent="center" pt="1.2vw" color={cardColor} fontSize="3.2vw" lineHeight="1">{card.symbol}</Text>
-        </Box>
+        <CardFace card={card} />
         {isSelected && <Box position="absolute" inset="0" borderRadius="3px" bg="rgba(65, 84, 82, .55)" pointerEvents="none" />}
       </Box>
     })}
   </Flex>
+}
+
+function CardFace({ card, played = false, index = 0 }: { card: GameCard; played?: boolean; index?: number }) {
+  const cardColor = card.suit === 'hearts' || card.suit === 'diamonds' ? 'coral' : 'ink'
+  const symbol = { spades: '♠', hearts: '♥', clubs: '♣', diamonds: '♦' }[card.suit]
+  return <Box h="100%" w={played ? { base: '48px', md: '68px' } : '100%'} aspectRatio="5 / 7" ml={played && index > 0 ? { base: '-12px', md: '-17px' } : '0'} bg="#fffdf6" border="1px solid" borderColor="blackAlpha.500" borderRadius="3px" position="relative" overflow="hidden" boxShadow={played ? '0 7px 13px rgba(0,0,0,.25)' : undefined} zIndex={index}>
+    <Text position="absolute" top={played ? '4px' : '.6vw'} left={played ? '5px' : '.6vw'} fontFamily="heading" fontSize={played ? { base: '16px', md: '23px' } : '1.65vw'} lineHeight=".9" color={cardColor}>{card.rank}</Text>
+    <Text position="absolute" inset="0" display="flex" alignItems="center" justifyContent="center" pt={played ? '12px' : '1.2vw'} color={cardColor} fontSize={played ? { base: '27px', md: '38px' } : '3.2vw'} lineHeight="1">{symbol}</Text>
+  </Box>
 }
 
 export default App

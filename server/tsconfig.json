@@ -4,13 +4,13 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": ["ES2022"],
-    "types": ["node", "vitest/globals"],
+    "types": ["node"],
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
     "paths": {
-      "@bigtwo/rules": ["./rules/src/index.ts"]
+      "@bigtwo/rules": ["../rules/src/index.ts"]
     }
   },
-  "include": ["tests", "vitest.config.ts"]
+  "include": ["src"]
 }

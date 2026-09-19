@@ -1,29 +1,20 @@
 {
-  "name": "big2-ui",
+  "name": "bigtwo",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.1.0",
   "type": "module",
+  "workspaces": ["rules", "server", "client"],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@chakra-ui/react": "^2.10.4",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
-    "framer-motion": "^12.23.24",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "dev": "concurrently -n server,client -c blue,magenta \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm run dev --workspace @bigtwo/server",
+    "dev:client": "npm run dev --workspace @bigtwo/client",
+    "build": "npm run build --workspace @bigtwo/client",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "npm run typecheck --workspaces"
   },
   "devDependencies": {
-    "@types/react": "^19.1.13",
-    "@types/react-dom": "^19.1.9",
-    "@vitejs/plugin-react": "^5.0.4",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17",
-    "typescript": "~5.9.3",
-    "vite": "^7.1.7"
+    "concurrently": "^9.1.0",
+    "vitest": "^3.0.5"
   }
 }

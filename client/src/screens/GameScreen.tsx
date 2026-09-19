@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActionBar } from '../components/ActionBar.js';
 import { Hand } from '../components/Hand.js';
 import { OpponentSeat, SeatPosition } from '../components/OpponentSeat.js';
+import { PlayHistory } from '../components/PlayHistory.js';
 import { TableArea } from '../components/TableArea.js';
 import { useGame } from '../state/GameProvider.js';
 import { ResultOverlay } from './ResultOverlay.js';
@@ -28,6 +29,7 @@ const GAME_LAYERS = {
   seats: 2,
   actions: 3,
   chrome: 5,
+  history: 6,
 } as const;
 
 /** The match view: a felt table with the opponents seated around it. */
@@ -35,6 +37,7 @@ export function GameScreen({ room }: GameScreenProps) {
   const { playerId, play, pass, leaveRoom } = useGame();
   const match = room.match!;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Any state change from the server (a play, a pass, a new round) invalidates
   // the selection, which may no longer be legal or even in hand.
@@ -70,17 +73,31 @@ export function GameScreen({ room }: GameScreenProps) {
         <Text fontSize="12px" fontWeight="800" letterSpacing=".1em" color="whiteAlpha.700">
           {room.code}
         </Text>
-        <Button
-          onClick={leaveRoom}
-          variant="ghost"
-          size="sm"
-          fontSize="12px"
-          color="white"
-          borderColor="whiteAlpha.300"
-          _hover={{ bg: 'whiteAlpha.200' }}
-        >
-          Exit
-        </Button>
+        <Flex align="center" gap="8px">
+          <Button
+            onClick={() => setHistoryOpen((open) => !open)}
+            aria-expanded={historyOpen}
+            variant="ghost"
+            size="sm"
+            fontSize="12px"
+            color="white"
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: 'whiteAlpha.200' }}
+          >
+            History
+          </Button>
+          <Button
+            onClick={leaveRoom}
+            variant="ghost"
+            size="sm"
+            fontSize="12px"
+            color="white"
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: 'whiteAlpha.200' }}
+          >
+            Exit
+          </Button>
+        </Flex>
       </Flex>
 
       <Box w="100%" h="100dvh" minH="560px" position="relative" overflow="hidden">
@@ -170,6 +187,18 @@ export function GameScreen({ room }: GameScreenProps) {
           />
         </Box>
       </Box>
+
+      {/* Full-bleed so the panel anchors to the window edge; clicks pass
+          through everywhere except the panel itself. */}
+      {historyOpen && (
+        <Box position="absolute" inset="0" zIndex={GAME_LAYERS.history} pointerEvents="none">
+          <PlayHistory
+            plays={match.history}
+            players={room.players}
+            onClose={() => setHistoryOpen(false)}
+          />
+        </Box>
+      )}
 
       {match.winnerId && <ResultOverlay room={room} winnerId={match.winnerId} />}
     </Box>

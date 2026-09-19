@@ -64,6 +64,7 @@ export interface PublicMatchState {
   readonly turnSeat: number;
   readonly currentPlay: PlayRecord | null;
   readonly passedSeats: readonly number[];
+  /** Every play of the match so far, oldest first. */
   readonly history: readonly PlayRecord[];
   readonly roundIndex: number;
   readonly startingCardId: string | null;
@@ -73,9 +74,6 @@ export interface PublicMatchState {
   /** The viewer's own hand, sorted ascending, or `[]` for a non-player viewer. */
   readonly yourHand: readonly Card[];
 }
-
-/** How many past plays `redactMatch` includes, newest last. */
-const HISTORY_WINDOW = 12;
 
 /**
  * Deals a new match.
@@ -246,7 +244,7 @@ export function redactMatch(state: MatchState, viewerId: string): PublicMatchSta
     turnSeat: state.turnSeat,
     currentPlay: state.currentPlay,
     passedSeats: state.passedSeats,
-    history: state.history.slice(-HISTORY_WINDOW),
+    history: state.history,
     roundIndex: state.roundIndex,
     startingCardId: state.startingCardId,
     winnerId: state.winnerId,

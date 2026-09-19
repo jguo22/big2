@@ -60,11 +60,11 @@ export function OpponentSeat({ player, position, isTurn, hasPassed }: OpponentSe
 
       <Flex align="center" justify="center" gap="6px">
         {isTurn && <Box w="7px" h="7px" borderRadius="full" bg="coral" />}
-        <Text fontSize="12px" fontWeight="800" color={isTurn ? 'white' : 'whiteAlpha.800'}>
+        <Text fontSize="17px" fontWeight="800" color={isTurn ? 'white' : 'whiteAlpha.800'}>
           {player.name}
         </Text>
       </Flex>
-      <Text fontSize="10px" opacity=".6">
+      <Text fontSize="14px" opacity=".6">
         {player.handCount} card{player.handCount === 1 ? '' : 's'}
       </Text>
     </Box>

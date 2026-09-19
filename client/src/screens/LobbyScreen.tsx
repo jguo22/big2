@@ -18,7 +18,7 @@ export function LobbyScreen({ room }: LobbyScreenProps) {
   return (
     <Box minH="100dvh" bg="bg.canvas" px={{ base: '20px', md: '48px' }} py={{ base: '22px', md: '40px' }}>
       <Stack gap={{ base: '24px', md: '32px' }} maxW="1100px" mx="auto">
-        <Flex align="center" justify="space-between" gap="12px">
+        <Flex align="center" gap="12px">
           <Button
             variant="ghost"
             colorPalette="forest"
@@ -31,10 +31,6 @@ export function LobbyScreen({ room }: LobbyScreenProps) {
           >
             ←
           </Button>
-          <Text fontSize="14px" fontWeight="800" letterSpacing=".14em" textTransform="uppercase" color="fg.muted">
-            Room
-          </Text>
-          <Box w="44px" />
         </Flex>
 
         <Flex align="flex-end" justify="space-between" gap="16px" wrap="wrap">

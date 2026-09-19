@@ -90,7 +90,8 @@ export function CreateRoomScreen({ onBack }: CreateRoomScreenProps) {
               <Button
                 variant="ghost"
                 colorPalette="forest"
-                px="0"
+                px="12px"
+                ml="-12px"
                 fontSize="15px"
                 onClick={() => setAdvancedOpen((open) => !open)}
                 aria-expanded={advancedOpen}

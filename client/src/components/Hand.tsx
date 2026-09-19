@@ -11,9 +11,9 @@ export interface HandProps {
   onToggle: (card: Card) => void;
   /**
    * Replaces the whole selection while the player drags a rectangle over the
-   * hand. Called with the ids selected when the drag began plus every card the
-   * rectangle currently covers; not called for plain clicks, which go to
-   * `onToggle` instead.
+   * hand. Called with the ids selected when the drag began, toggled for every
+   * card the rectangle currently covers; not called for plain clicks, which go
+   * to `onToggle` instead.
    */
   onSelect: (cardIds: string[]) => void;
 }
@@ -71,7 +71,6 @@ export function Hand({ cards, selectedIds, disabled, onToggle, onSelect }: HandP
     origin.current = localPoint(event, container.getBoundingClientRect());
     base.current = selectedIds;
     dragged.current = false;
-    container.setPointerCapture(event.pointerId);
   };
 
   const extendDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -81,8 +80,13 @@ export function Hand({ cards, selectedIds, disabled, onToggle, onSelect }: HandP
 
     const bounds = container.getBoundingClientRect();
     const point = localPoint(event, bounds);
-    if (!dragged.current && Math.hypot(point.x - start.x, point.y - start.y) < DRAG_THRESHOLD) return;
-    dragged.current = true;
+    if (!dragged.current) {
+      if (Math.hypot(point.x - start.x, point.y - start.y) < DRAG_THRESHOLD) return;
+      dragged.current = true;
+      // Captured only once the press is a drag: capturing on pointerdown would
+      // retarget the click away from the card and break click-to-select.
+      container.setPointerCapture(event.pointerId);
+    }
 
     const rect: Rect = {
       left: Math.min(start.x, point.x),
@@ -106,7 +110,8 @@ export function Hand({ cards, selectedIds, disabled, onToggle, onSelect }: HandP
   };
 
   const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (origin.current) containerRef.current?.releasePointerCapture(event.pointerId);
+    const container = containerRef.current;
+    if (container?.hasPointerCapture(event.pointerId)) container.releasePointerCapture(event.pointerId);
     origin.current = null;
     setMarquee(null);
   };
@@ -179,6 +184,7 @@ export function Hand({ cards, selectedIds, disabled, onToggle, onSelect }: HandP
           zIndex="20"
           pointerEvents="none"
           borderWidth="1px"
+          borderStyle="dotted"
           borderColor="coral"
           borderRadius="2px"
           bg="rgba(255, 255, 255, .18)"
@@ -194,17 +200,27 @@ export function Hand({ cards, selectedIds, disabled, onToggle, onSelect }: HandP
  * Params:
  *   container: the hand element; its `[data-card-id]` descendants are the cards.
  *   rect: the marquee, in viewport coordinates.
- *   base: ids already selected when the drag began; these stay selected.
- * Returns: `base`, in its original order, followed by the newly covered cards
- *   in hand order. A card counts as covered when its box overlaps `rect` at all.
+ *   base: ids already selected when the drag began.
+ * Returns: `base` with every covered card toggled — covered cards that were
+ *   already in `base` are dropped, so dragging over the selection clears it,
+ *   and the rest are appended in hand order. A card counts as covered when
+ *   `rect` overlaps the part of it the player can actually see: cards in a rank
+ *   group stack under the next card in the group, and only the strip above that
+ *   card counts.
  */
 function idsInRect(container: HTMLElement, rect: Rect, base: readonly string[]): string[] {
   const covered = Array.from(container.querySelectorAll<HTMLElement>('[data-card-id]'))
     .filter((element) => {
       const box = element.getBoundingClientRect();
-      return box.left < rect.right && box.right > rect.left && box.top < rect.bottom && box.bottom > rect.top;
+      // The next card in the same rank group sits on top of this one and hides
+      // everything from its own top edge down.
+      const next = element.nextElementSibling?.getBoundingClientRect();
+      const bottom = next ? Math.min(box.bottom, next.top) : box.bottom;
+      return box.left < rect.right && box.right > rect.left && box.top < rect.bottom && bottom > rect.top;
     })
-    .map((element) => element.dataset.cardId!)
-    .filter((id) => !base.includes(id));
-  return [...base, ...covered];
+    .map((element) => element.dataset.cardId!);
+  return [
+    ...base.filter((id) => !covered.includes(id)),
+    ...covered.filter((id) => !base.includes(id)),
+  ];
 }

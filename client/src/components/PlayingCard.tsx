@@ -1,5 +1,5 @@
 import { Card, RANK_LABEL, SUIT_GLYPH } from '@bigtwo/rules';
-import { Box, chakra, Text } from '@chakra-ui/react';
+import { Box, chakra, Flex, Text } from '@chakra-ui/react';
 
 /** A real <button> with Chakra style props, so `type` and `disabled` type-check. */
 const CardButton = chakra('button');
@@ -34,17 +34,25 @@ export function PlayingCard({ card, selected, disabled, onToggle, variant = 'han
 
   const face = (
     <>
-      <Text
+      <Flex
         position="absolute"
         top={played ? '4px' : '6%'}
         left={played ? '5px' : '8%'}
-        fontFamily="heading"
-        fontSize={played ? { base: '16px', md: '23px' } : 'clamp(12px, 1.65vw, 22px)'}
-        lineHeight=".9"
+        alignItems="center"
+        gap="2px"
         color={ink}
       >
-        {RANK_LABEL[card.rank]}
-      </Text>
+        <Text
+          fontFamily="heading"
+          fontSize={played ? { base: '16px', md: '23px' } : 'clamp(12px, 1.65vw, 22px)'}
+          lineHeight=".9"
+        >
+          {RANK_LABEL[card.rank]}
+        </Text>
+        <Text fontSize={played ? { base: '10px', md: '14px' } : 'clamp(8px, 1vw, 13px)'} lineHeight="1">
+          {SUIT_GLYPH[card.suit]}
+        </Text>
+      </Flex>
       <Text
         position="absolute"
         inset="0"

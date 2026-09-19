@@ -22,6 +22,14 @@ const SEAT_LAYOUT: Record<number, SeatPosition[]> = {
   3: ['left', 'top', 'right'],
 };
 
+const GAME_LAYERS = {
+  hand: 0,
+  table: 1,
+  seats: 2,
+  actions: 3,
+  chrome: 5,
+} as const;
+
 /** The match view: a felt table with the opponents seated around it. */
 export function GameScreen({ room }: GameScreenProps) {
   const { playerId, play, pass, leaveRoom } = useGame();
@@ -54,7 +62,7 @@ export function GameScreen({ room }: GameScreenProps) {
         top={{ base: '14px', md: '24px' }}
         left={{ base: '18px', md: '32px' }}
         right={{ base: '18px', md: '32px' }}
-        zIndex="5"
+        zIndex={GAME_LAYERS.chrome}
         align="center"
         justify="space-between"
         gap="12px"
@@ -89,7 +97,7 @@ export function GameScreen({ room }: GameScreenProps) {
         <Flex
           position="absolute"
           inset="18% 10% 31%"
-          zIndex="1"
+          zIndex={GAME_LAYERS.table}
           align="center"
           justify="center"
           borderWidth="1px"
@@ -99,14 +107,42 @@ export function GameScreen({ room }: GameScreenProps) {
           <TableArea match={match} players={room.players} isYourTurn={isYourTurn} />
         </Flex>
 
-        <Box position="absolute" top="80%" left="50%" transform="translate(-50%, -50%)" w="74vw" zIndex="0">
+        <Box
+          position="absolute"
+          bottom="8%"
+          left="50%"
+          transform="translateX(-50%)"
+          w="74vw"
+          zIndex={GAME_LAYERS.hand}
+        >
           <Hand cards={match.yourHand} selectedIds={selectedIds} disabled={!isYourTurn} onToggle={toggle} />
         </Box>
 
-        <Box position="absolute" bottom="18px" left="50%" transform="translateX(-50%)" zIndex="3">
+        <Text
+          position="absolute"
+          bottom="1.5%"
+          left="50%"
+          transform="translateX(-50%)"
+          zIndex={GAME_LAYERS.hand}
+          color="white"
+          fontWeight="800"
+          fontSize="13px"
+          whiteSpace="nowrap"
+        >
+          {you?.name ?? 'You'} · {match.yourHand.length} card{match.yourHand.length === 1 ? '' : 's'}
+        </Text>
+
+        <Box
+          position="absolute"
+          top="57%"
+          left="50%"
+          transform="translateX(-50%)"
+          zIndex={GAME_LAYERS.actions}
+        >
           <ActionBar
             playerName={you?.name ?? 'You'}
             handCount={match.yourHand.length}
+            showPlayerName={false}
             isYourTurn={isYourTurn}
             blockedReason={selectedIds.length === 0 ? 'Select cards to play.' : blockedReason}
             selectionCount={selectedIds.length}

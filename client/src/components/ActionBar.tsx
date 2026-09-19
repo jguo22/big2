@@ -3,6 +3,8 @@ import { Button, Flex, Text } from '@chakra-ui/react';
 export interface ActionBarProps {
   /** Shown above the buttons, with the local player's remaining card count. */
   playerName: string;
+  /** Allows the name to be positioned separately from the table controls. */
+  showPlayerName?: boolean;
   handCount: number;
   /** Whether it is the local player's turn. */
   isYourTurn: boolean;
@@ -21,6 +23,7 @@ export interface ActionBarProps {
  */
 export function ActionBar({
   playerName,
+  showPlayerName = true,
   handCount,
   isYourTurn,
   blockedReason,
@@ -33,9 +36,11 @@ export function ActionBar({
 
   return (
     <Flex direction="column" align="center" textAlign="center">
-      <Text color="white" fontWeight="800" fontSize="13px" mb="6px">
-        {playerName} · {handCount} card{handCount === 1 ? '' : 's'}
-      </Text>
+      {showPlayerName && (
+        <Text color="white" fontWeight="800" fontSize="13px" mb="6px">
+          {playerName} · {handCount} card{handCount === 1 ? '' : 's'}
+        </Text>
+      )}
 
       {/* Height is reserved whether or not there is a reason to show, so the
           buttons never jump when a selection becomes illegal. */}

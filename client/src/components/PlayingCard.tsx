@@ -4,23 +4,19 @@ import { Box, chakra, Text } from '@chakra-ui/react';
 /** A real <button> with Chakra style props, so `type` and `disabled` type-check. */
 const CardButton = chakra('button');
 
-export type CardSize = 'sm' | 'md';
+/** `hand` cards scale with the viewport; `played` cards sit at a fixed size on the table. */
+export type CardVariant = 'hand' | 'played';
 
 export interface PlayingCardProps {
   card: Card;
-  /** Renders the selected (raised, outlined) state and sets `aria-pressed`. */
+  /** Dims the card to show it is selected, and sets `aria-pressed`. */
   selected?: boolean;
-  /** Greys the card out and blocks interaction. */
+  /** Blocks interaction, e.g. while it is another player's turn. */
   disabled?: boolean;
   /** Omit to render a static card rather than a button. */
   onToggle?: (card: Card) => void;
-  size?: CardSize;
+  variant?: CardVariant;
 }
-
-const SIZES: Record<CardSize, { w: string; rank: string; suit: string }> = {
-  sm: { w: 'clamp(34px, 5vw, 46px)', rank: 'clamp(11px, 1.4vw, 14px)', suit: 'clamp(18px, 2.4vw, 24px)' },
-  md: { w: 'clamp(42px, 6.2vw, 68px)', rank: 'clamp(13px, 1.7vw, 20px)', suit: 'clamp(22px, 3vw, 38px)' },
-};
 
 const SUIT_NAMES: Record<Card['suit'], string> = {
   S: 'Spades',
@@ -29,19 +25,24 @@ const SUIT_NAMES: Record<Card['suit'], string> = {
   D: 'Diamonds',
 };
 
-/**
- * One card face. Renders as a toggle button when `onToggle` is supplied and as
- * plain content otherwise, so table cards are not focusable.
- */
-export function PlayingCard({ card, selected, disabled, onToggle, size = 'md' }: PlayingCardProps) {
+/** One card face, cream with the rank top-left and the suit filling the body. */
+export function PlayingCard({ card, selected, disabled, onToggle, variant = 'hand' }: PlayingCardProps) {
   const isRed = card.suit === 'H' || card.suit === 'D';
-  const metrics = SIZES[size];
-  const label = `${RANK_LABEL[card.rank]} of ${SUIT_NAMES[card.suit]}`;
   const ink = isRed ? 'coral' : 'ink';
+  const played = variant === 'played';
+  const label = `${RANK_LABEL[card.rank]} of ${SUIT_NAMES[card.suit]}`;
 
   const face = (
     <>
-      <Text position="absolute" top="5%" left="9%" fontFamily="heading" fontSize={metrics.rank} lineHeight=".9" color={ink}>
+      <Text
+        position="absolute"
+        top={played ? '4px' : '6%'}
+        left={played ? '5px' : '8%'}
+        fontFamily="heading"
+        fontSize={played ? { base: '16px', md: '23px' } : 'clamp(12px, 1.65vw, 22px)'}
+        lineHeight=".9"
+        color={ink}
+      >
         {RANK_LABEL[card.rank]}
       </Text>
       <Text
@@ -50,8 +51,8 @@ export function PlayingCard({ card, selected, disabled, onToggle, size = 'md' }:
         display="flex"
         alignItems="center"
         justifyContent="center"
-        pt="12%"
-        fontSize={metrics.suit}
+        pt={played ? '12px' : '14%'}
+        fontSize={played ? { base: '27px', md: '38px' } : 'clamp(20px, 3.2vw, 44px)'}
         lineHeight="1"
         color={ink}
         aria-hidden
@@ -62,11 +63,13 @@ export function PlayingCard({ card, selected, disabled, onToggle, size = 'md' }:
   );
 
   const surface = {
-    w: metrics.w,
-    aspectRatio: '2 / 3',
+    w: played ? ({ base: '48px', md: '68px' } as const) : '100%',
+    h: played ? undefined : '100%',
+    aspectRatio: '5 / 7',
     bg: '#fffdf6',
     borderWidth: '1px',
-    borderRadius: '7px',
+    borderColor: 'blackAlpha.500',
+    borderRadius: '3px',
     position: 'relative' as const,
     overflow: 'hidden' as const,
     flex: '0 0 auto',
@@ -74,7 +77,7 @@ export function PlayingCard({ card, selected, disabled, onToggle, size = 'md' }:
 
   if (!onToggle) {
     return (
-      <Box {...surface} borderColor="border.subtle" boxShadow="0 4px 10px rgba(7,39,36,.18)" role="img" aria-label={label}>
+      <Box {...surface} boxShadow={played ? '0 7px 13px rgba(0,0,0,.25)' : undefined} role="img" aria-label={label}>
         {face}
       </Box>
     );
@@ -88,16 +91,13 @@ export function PlayingCard({ card, selected, disabled, onToggle, size = 'md' }:
       disabled={disabled}
       onClick={() => onToggle(card)}
       {...surface}
-      borderColor={selected ? 'coral' : 'border.subtle'}
-      boxShadow={selected ? '0 10px 20px rgba(7,39,36,.28)' : '0 4px 10px rgba(7,39,36,.18)'}
-      opacity={disabled ? 0.45 : 1}
-      cursor={disabled ? 'not-allowed' : 'pointer'}
-      transform={selected ? 'translateY(-16px)' : 'translateY(0)'}
-      transition="transform .16s ease-out, box-shadow .16s ease-out"
-      _hover={disabled ? undefined : { transform: selected ? 'translateY(-16px)' : 'translateY(-7px)' }}
-      _focusVisible={{ outline: '2px solid', outlineColor: 'coral', outlineOffset: '2px' }}
+      cursor={disabled ? 'default' : 'pointer'}
+      _focusVisible={{ outline: '2px solid', outlineColor: 'coral', outlineOffset: '1px' }}
     >
       {face}
+      {selected && (
+        <Box position="absolute" inset="0" borderRadius="3px" bg="rgba(65, 84, 82, .55)" pointerEvents="none" />
+      )}
     </CardButton>
   );
 }

@@ -1,78 +1,98 @@
-import { ComboCategory, PublicMatchState, PublicPlayer } from '@bigtwo/rules';
-import { Flex, Stack, Text } from '@chakra-ui/react';
+import { PlayRecord, PublicMatchState, PublicPlayer } from '@bigtwo/rules';
+import { Box, Flex, Stack, Text } from '@chakra-ui/react';
 import { PlayingCard } from './PlayingCard.js';
 
 export interface TableAreaProps {
   match: PublicMatchState;
   players: readonly PublicPlayer[];
+  /** True when the local player is the one to act. */
+  isYourTurn: boolean;
 }
 
-const CATEGORY_LABEL: Record<ComboCategory, string> = {
-  single: 'Single',
-  pair: 'Pair',
-  triple: 'Triple',
-  straight: 'Straight',
-  flush: 'Flush',
-  fullHouse: 'Full house',
-  fourOfAKind: 'Four of a kind',
-  straightFlush: 'Straight flush',
-};
+/** How many recent plays stay visible behind the current one. */
+const VISIBLE_PLAYS = 3;
 
 /**
- * The centre of the table: the play that must currently be beaten, plus the
- * earlier plays of this round for context.
+ * The centre of the table. The current play sits at full size with the two
+ * before it stacked behind, scaled down and faded, so the round reads as a
+ * pile rather than a list.
  */
-export function TableArea({ match, players }: TableAreaProps) {
+export function TableArea({ match, players, isYourTurn }: TableAreaProps) {
   const nameOf = (playerId: string) => players.find((p) => p.id === playerId)?.name ?? 'Someone';
-  const recent = match.history.filter((play) => play.roundIndex === match.roundIndex).slice(-4, -1);
+  const recent = match.history.slice(-VISIBLE_PLAYS);
+  const leadName = match.currentPlay ? nameOf(match.currentPlay.playerId) : null;
 
   return (
-    <Flex
+    <Stack
       as="section"
       aria-label="Table"
       aria-live="polite"
-      direction="column"
+      gap="14px"
+      w="full"
+      px={{ base: '12px', md: '30px' }}
       align="center"
-      justify="center"
-      gap="12px"
-      flex="1"
-      minH={{ base: '150px', md: '200px' }}
-      borderWidth="1px"
-      borderColor="rgba(255,255,255,.18)"
-      borderRadius="24px"
-      bg="rgba(255,255,255,.04)"
-      px="16px"
-      py="20px"
     >
+      <Text
+        color="whiteAlpha.700"
+        fontSize="10px"
+        fontWeight="800"
+        letterSpacing=".16em"
+        textTransform="uppercase"
+      >
+        {leadName ? `${leadName}'s play` : 'The table is ready'}
+      </Text>
+
       {match.currentPlay ? (
-        <>
-          <Text fontSize="13px" color="fg.onFeltMuted">
-            <Text as="span" fontWeight="800" color="fg.onFelt">
-              {nameOf(match.currentPlay.playerId)}
-            </Text>{' '}
-            played {CATEGORY_LABEL[match.currentPlay.category].toLowerCase()}
-          </Text>
-          <Flex gap="6px" wrap="wrap" justify="center">
-            {match.currentPlay.cards.map((card) => (
-              <PlayingCard key={card.id} card={card} size="sm" />
-            ))}
-          </Flex>
-        </>
+        <Flex justify="center" align="flex-end" h={{ base: '112px', md: '148px' }} w="full">
+          {recent.map((play, index) => (
+            <StackedPlay
+              key={`${play.playerId}-${play.roundIndex}-${index}`}
+              play={play}
+              name={nameOf(play.playerId)}
+              isCurrent={index === recent.length - 1}
+              isFirst={index === 0}
+              depth={index}
+            />
+          ))}
+        </Flex>
       ) : (
-        <Text fontSize="13px" color="fg.onFeltMuted" textAlign="center">
-          Table is clear — lead any legal combination.
+        <Text color="whiteAlpha.500" fontSize="13px" textAlign="center">
+          {isYourTurn ? 'Choose cards from your hand to lead' : 'Waiting for the next play'}
         </Text>
       )}
+    </Stack>
+  );
+}
 
-      {recent.length > 0 && (
-        <Stack as="ol" direction="row" gap="12px" wrap="wrap" justify="center" listStyleType="none">
-          {recent.map((play, index) => (
-            <Text as="li" key={`${play.playerId}-${index}`} fontSize="11px" color="rgba(255,255,255,.4)">
-              {nameOf(play.playerId)}: {CATEGORY_LABEL[play.category].toLowerCase()}
-            </Text>
-          ))}
-        </Stack>
-      )}
-    </Flex>
+interface StackedPlayProps {
+  play: PlayRecord;
+  name: string;
+  isCurrent: boolean;
+  isFirst: boolean;
+  depth: number;
+}
+
+function StackedPlay({ play, name, isCurrent, isFirst, depth }: StackedPlayProps) {
+  return (
+    <Box
+      position="relative"
+      ml={isFirst ? '0' : { base: '-28px', md: '-42px' }}
+      zIndex={depth}
+      transform={`translateY(${isCurrent ? '0' : '12px'}) scale(${isCurrent ? 1 : 0.82})`}
+      transformOrigin="bottom center"
+      opacity={isCurrent ? 1 : 0.48}
+      transition="transform .2s, opacity .2s"
+    >
+      <Text textAlign="center" color="whiteAlpha.700" fontSize="10px" mb="4px">
+        {name}
+      </Text>
+      <Flex justify="center" h={{ base: '76px', md: '100px' }}>
+        {play.cards.map((card, index) => (
+          <Box key={card.id} ml={index === 0 ? '0' : { base: '-12px', md: '-17px' }} zIndex={index}>
+            <PlayingCard card={card} variant="played" />
+          </Box>
+        ))}
+      </Flex>
+    </Box>
   );
 }

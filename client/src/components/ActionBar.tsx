@@ -1,6 +1,9 @@
 import { Button, Flex, Text } from '@chakra-ui/react';
 
 export interface ActionBarProps {
+  /** Shown above the buttons, with the local player's remaining card count. */
+  playerName: string;
+  handCount: number;
   /** Whether it is the local player's turn. */
   isYourTurn: boolean;
   /** Why the current selection cannot be played, or `null` when it can. */
@@ -10,68 +13,63 @@ export interface ActionBarProps {
   mustPlay: boolean;
   onPlay: () => void;
   onPass: () => void;
-  onClear: () => void;
 }
 
 /**
- * Play, pass and clear controls. Mirrors the server's rules locally so the
- * buttons reflect legality immediately, but the server still decides.
+ * The bottom controls. Mirrors the server's rules locally so the buttons
+ * reflect legality immediately, but the server still decides.
  */
 export function ActionBar({
+  playerName,
+  handCount,
   isYourTurn,
   blockedReason,
   selectionCount,
   mustPlay,
   onPlay,
   onPass,
-  onClear,
 }: ActionBarProps) {
   const blocked = Boolean(blockedReason) && isYourTurn && selectionCount > 0;
-  const status = !isYourTurn
-    ? 'Waiting for the other players…'
-    : selectionCount === 0
-      ? 'Select cards to play.'
-      : (blockedReason ?? 'Ready to play.');
 
   return (
-    <Flex direction={{ base: 'column', sm: 'row' }} align="center" justify="space-between" gap="10px" w="full">
-      <Text aria-live="polite" fontSize="13px" fontWeight="600" color={blocked ? 'coral' : 'fg.onFeltMuted'}>
-        {status}
+    <Flex direction="column" align="center" textAlign="center">
+      <Text color="white" fontWeight="800" fontSize="13px" mb="6px">
+        {playerName} · {handCount} card{handCount === 1 ? '' : 's'}
       </Text>
 
-      <Flex gap="8px">
+      {blocked && (
+        <Text aria-live="polite" color="coral" fontSize="11px" fontWeight="700" mb="6px">
+          {blockedReason}
+        </Text>
+      )}
+
+      <Flex justify="center" gap="8px">
         <Button
-          variant="ghost"
-          size="sm"
-          color="fg.onFeltMuted"
-          borderColor="rgba(255,255,255,.22)"
-          _hover={{ bg: 'rgba(255,255,255,.12)', color: 'fg.onFelt' }}
-          onClick={onClear}
-          disabled={selectionCount === 0}
+          onClick={onPlay}
+          disabled={!isYourTurn || blockedReason !== null}
+          h="40px"
+          px="24px"
+          fontSize="12px"
+          bg="coral"
+          color="white"
+          borderColor="#d85e3d"
+          _hover={{ bg: '#d85e3d' }}
         >
-          Clear
+          Play {selectionCount > 0 && `(${selectionCount})`}
         </Button>
         <Button
-          variant="ghost"
-          size="sm"
-          px="22px"
-          color="fg.onFelt"
-          borderColor="rgba(255,255,255,.35)"
-          _hover={{ bg: 'rgba(255,255,255,.14)' }}
           onClick={onPass}
           disabled={!isYourTurn || mustPlay}
           title={mustPlay ? 'You are leading and must play' : undefined}
+          h="40px"
+          px="22px"
+          fontSize="12px"
+          bg="whiteAlpha.200"
+          color="white"
+          borderColor="whiteAlpha.400"
+          _hover={{ bg: 'whiteAlpha.300' }}
         >
           Pass
-        </Button>
-        <Button
-          colorPalette="brand"
-          size="sm"
-          px="26px"
-          onClick={onPlay}
-          disabled={!isYourTurn || blockedReason !== null}
-        >
-          Play {selectionCount > 0 ? `(${selectionCount})` : ''}
         </Button>
       </Flex>
     </Flex>

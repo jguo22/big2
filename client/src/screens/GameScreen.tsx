@@ -1,9 +1,9 @@
-import { beats, Card, detectCombination, RoomView } from '@bigtwo/rules';
-import { Button, Flex, Stack, Text } from '@chakra-ui/react';
+import { beats, Card, detectCombination, PublicPlayer, RoomView } from '@bigtwo/rules';
+import { Box, Button, Flex, Text } from '@chakra-ui/react';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { ActionBar } from '../components/ActionBar.js';
 import { Hand } from '../components/Hand.js';
-import { SeatList } from '../components/SeatList.js';
+import { OpponentSeat, SeatPosition } from '../components/OpponentSeat.js';
 import { TableArea } from '../components/TableArea.js';
 import { useGame } from '../state/GameProvider.js';
 import { ResultOverlay } from './ResultOverlay.js';
@@ -14,7 +14,17 @@ export interface GameScreenProps {
   banner: ReactNode;
 }
 
-/** The match view: seats, table, private hand and action controls. */
+/**
+ * Where opponents sit for a given opponent count, listed in turn order
+ * starting with the player who acts after you.
+ */
+const SEAT_LAYOUT: Record<number, SeatPosition[]> = {
+  1: ['top'],
+  2: ['left', 'right'],
+  3: ['left', 'top', 'right'],
+};
+
+/** The match view: a felt table with the opponents seated around it. */
 export function GameScreen({ room, banner }: GameScreenProps) {
   const { playerId, play, pass, leaveRoom } = useGame();
   const match = room.match!;
@@ -31,70 +41,106 @@ export function GameScreen({ room, banner }: GameScreenProps) {
   const selectedCards = match.yourHand.filter((card) => selectedIds.includes(card.id));
   const blockedReason = useMemo(() => checkSelection(selectedCards, match), [selectedCards, match]);
 
+  const opponents = useMemo(() => seatOpponents(room.players, you?.seat ?? 0), [room.players, you?.seat]);
+  const layout = SEAT_LAYOUT[opponents.length] ?? [];
+
   const toggle = (card: Card) =>
     setSelectedIds((current) =>
       current.includes(card.id) ? current.filter((id) => id !== card.id) : [...current, card.id],
     );
 
   return (
-    <Flex direction="column" minH="100dvh" className="felt-pattern">
+    <Box minH="100dvh" position="relative" className="felt-pattern">
       <Flex
-        as="header"
-        w="full"
-        maxW="960px"
-        mx="auto"
-        px={{ base: '16px', md: '28px' }}
-        py={{ base: '12px', md: '18px' }}
+        position="absolute"
+        top={{ base: '14px', md: '24px' }}
+        left={{ base: '18px', md: '32px' }}
+        right={{ base: '18px', md: '32px' }}
+        zIndex="5"
         align="center"
         justify="space-between"
         gap="12px"
       >
-        <Text fontSize="13px" fontWeight="800" letterSpacing=".1em" color="fg.onFeltMuted">
+        <Text fontSize="12px" fontWeight="800" letterSpacing=".1em" color="whiteAlpha.700">
           {room.code}
         </Text>
+        <Box flex="1" maxW="420px">
+          {banner}
+        </Box>
         <Button
-          size="xs"
-          variant="ghost"
-          color="fg.onFelt"
-          borderColor="rgba(255,255,255,.28)"
-          _hover={{ bg: 'rgba(255,255,255,.14)' }}
           onClick={leaveRoom}
+          variant="ghost"
+          size="sm"
+          fontSize="12px"
+          color="white"
+          borderColor="whiteAlpha.300"
+          _hover={{ bg: 'whiteAlpha.200' }}
         >
-          Leave
+          Exit
         </Button>
       </Flex>
 
-      <Stack gap="14px" w="full" maxW="960px" mx="auto" px={{ base: '16px', md: '28px' }} flex="1">
-        {banner}
-        <SeatList room={room} youId={playerId} />
-        <TableArea match={match} players={room.players} />
-      </Stack>
+      <Box w="100%" h="100dvh" minH="560px" position="relative" overflow="hidden">
+        {opponents.map((player, index) => (
+          <OpponentSeat
+            key={player.id}
+            player={player}
+            position={layout[index] ?? 'top'}
+            isTurn={player.seat === match.turnSeat && match.winnerId === null}
+            hasPassed={match.passedSeats.includes(player.seat)}
+          />
+        ))}
 
-      <Stack
-        as="footer"
-        gap="12px"
-        w="full"
-        maxW="960px"
-        mx="auto"
-        px={{ base: '10px', md: '28px' }}
-        pb={{ base: '18px', md: '26px' }}
-        pt="6px"
-      >
-        <Hand cards={match.yourHand} selectedIds={selectedIds} disabled={!isYourTurn} onToggle={toggle} />
-        <ActionBar
-          isYourTurn={isYourTurn}
-          blockedReason={selectedIds.length === 0 ? 'Select cards to play.' : blockedReason}
-          selectionCount={selectedIds.length}
-          mustPlay={match.currentPlay === null}
-          onPlay={() => play(selectedIds)}
-          onPass={pass}
-          onClear={() => setSelectedIds([])}
-        />
-      </Stack>
+        <Flex
+          position="absolute"
+          inset="18% 10% 31%"
+          zIndex="1"
+          align="center"
+          justify="center"
+          borderWidth="1px"
+          borderColor="whiteAlpha.200"
+          borderRadius="24px"
+        >
+          <TableArea match={match} players={room.players} isYourTurn={isYourTurn} />
+        </Flex>
+
+        <Box position="absolute" top="80%" left="50%" transform="translate(-50%, -50%)" w="74vw" zIndex="0">
+          <Hand cards={match.yourHand} selectedIds={selectedIds} disabled={!isYourTurn} onToggle={toggle} />
+        </Box>
+
+        <Box position="absolute" bottom="18px" left="50%" transform="translateX(-50%)" zIndex="3">
+          <ActionBar
+            playerName={you?.name ?? 'You'}
+            handCount={match.yourHand.length}
+            isYourTurn={isYourTurn}
+            blockedReason={selectedIds.length === 0 ? 'Select cards to play.' : blockedReason}
+            selectionCount={selectedIds.length}
+            mustPlay={match.currentPlay === null}
+            onPlay={() => play(selectedIds)}
+            onPass={pass}
+          />
+        </Box>
+      </Box>
 
       {match.winnerId && <ResultOverlay room={room} winnerId={match.winnerId} />}
-    </Flex>
+    </Box>
   );
+}
+
+/**
+ * Orders the other players by turn order, starting with whoever plays after
+ * the local player, so seat positions stay stable as the turn moves.
+ *
+ * Params:
+ *   players: every player in the room.
+ *   yourSeat: the local player's seat index.
+ * Returns: the opponents, in the order they will act.
+ */
+function seatOpponents(players: readonly PublicPlayer[], yourSeat: number): PublicPlayer[] {
+  const ordered = [...players].sort((a, b) => a.seat - b.seat);
+  const start = ordered.findIndex((player) => player.seat === yourSeat);
+  const rotated = start === -1 ? ordered : [...ordered.slice(start), ...ordered.slice(0, start)];
+  return rotated.filter((player) => player.seat !== yourSeat);
 }
 
 /**

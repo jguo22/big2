@@ -1,5 +1,5 @@
 import { Card } from '@bigtwo/rules';
-import { Flex, Text } from '@chakra-ui/react';
+import { Box, Flex, Text } from '@chakra-ui/react';
 import { PlayingCard } from './PlayingCard.js';
 
 export interface HandProps {
@@ -11,27 +11,27 @@ export interface HandProps {
 }
 
 /**
- * The player's private hand. Cards overlap so a full hand fits on a phone, and
- * each card is an individually focusable toggle.
+ * The player's private hand: a fanned row of cards that overlap so a full
+ * thirteen fit across a phone. Each card is an individually focusable toggle.
  */
 export function Hand({ cards, selectedIds, disabled, onToggle }: HandProps) {
   if (cards.length === 0) {
     return (
-      <Text py="24px" textAlign="center" fontSize="14px" color="fg.onFeltMuted">
+      <Text py="24px" textAlign="center" fontSize="14px" color="whiteAlpha.600">
         No cards left.
       </Text>
     );
   }
 
   return (
-    // pt leaves room for a selected card to lift without being clipped.
-    <Flex role="group" aria-label="Your hand" justify="center" align="flex-end" w="full" pt="20px" px="6px">
+    <Flex role="group" aria-label="Your hand" justify="center" align="center" w="full">
       {cards.map((card, index) => (
-        <Flex
+        <Box
           key={card.id}
           flex="0 0 auto"
-          ml={index === 0 ? '0' : 'clamp(-20px, -1.6vw, -6px)'}
-          zIndex={selectedIds.includes(card.id) ? 20 : index}
+          w="clamp(38px, 5.3vw, 72px)"
+          ml={index === 0 ? '0' : { base: '-2px', md: '-4px' }}
+          zIndex={index}
         >
           <PlayingCard
             card={card}
@@ -39,7 +39,7 @@ export function Hand({ cards, selectedIds, disabled, onToggle }: HandProps) {
             disabled={disabled}
             onToggle={onToggle}
           />
-        </Flex>
+        </Box>
       ))}
     </Flex>
   );

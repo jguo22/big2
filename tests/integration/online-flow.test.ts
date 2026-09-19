@@ -172,6 +172,51 @@ describe('online room flow', () => {
     client.close();
   });
 
+  it('lists rooms and flags which are private', async () => {
+    const host = await TestClient.connect(server.port, 'Lister');
+    host.send({ type: 'create_room', requestId: 'lc1', name: 'Open table', password: '' });
+    const openRoom = await host.waitForRoom(() => true);
+    expect(openRoom.isPrivate).toBe(false);
+    expect(openRoom.name).toBe('Open table');
+
+    host.send({ type: 'create_room', requestId: 'lc2', name: 'Closed table', password: 'hunter2' });
+    const closedRoom = await host.waitForRoom((view) => view.name === 'Closed table');
+    expect(closedRoom.isPrivate).toBe(true);
+
+    const browser = await TestClient.connect(server.port, 'Browser');
+    browser.send({ type: 'list_rooms', requestId: 'lr1' });
+    const listed = await browser.waitFor((message) => message.type === 'rooms');
+    const summaries = (listed as Extract<ServerMessage, { type: 'rooms' }>).rooms;
+
+    const closed = summaries.find((entry) => entry.code === closedRoom.code)!;
+    expect(closed.isPrivate).toBe(true);
+    expect(closed.hostName).toBe('Lister');
+    expect(closed.maxPlayers).toBe(4);
+    // The password must never reach a client, in any form.
+    expect(JSON.stringify(summaries)).not.toContain('hunter2');
+
+    host.close();
+    browser.close();
+  });
+
+  it('requires the right password to join a private room', async () => {
+    const host = await TestClient.connect(server.port, 'Keeper');
+    host.send({ type: 'create_room', requestId: 'pc1', name: 'Locked', password: 'letmein' });
+    const room = await host.waitForRoom(() => true);
+
+    const guest = await TestClient.connect(server.port, 'Knocker');
+    guest.send({ type: 'join_room', requestId: 'pj1', code: room.code, password: 'wrong' });
+    const rejected = await guest.waitFor((message) => message.type === 'error');
+    expect((rejected as Extract<ServerMessage, { type: 'error' }>).code).toBe('wrong_password');
+
+    guest.send({ type: 'join_room', requestId: 'pj2', code: room.code, password: 'letmein' });
+    const joined = await guest.waitForRoom((view) => view.players.length === 2);
+    expect(joined.code).toBe(room.code);
+
+    host.close();
+    guest.close();
+  });
+
   it('rejects an unknown room code', async () => {
     const client = await TestClient.connect(server.port, 'Lost');
     client.send({ type: 'join_room', requestId: 'j9', code: 'ZZZZ' });

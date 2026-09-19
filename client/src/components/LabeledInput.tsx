@@ -14,9 +14,9 @@ export function LabeledInput({ label, value, onValueChange, ...props }: LabeledI
       <Text
         as="label"
         display="block"
-        fontSize="11px"
+        fontSize="14px"
         fontWeight="800"
-        letterSpacing=".12em"
+        letterSpacing=".1em"
         textTransform="uppercase"
         color="fg.muted"
         mb="8px"
@@ -27,7 +27,8 @@ export function LabeledInput({ label, value, onValueChange, ...props }: LabeledI
         value={value}
         onChange={(event) => onValueChange(event.target.value)}
         size="lg"
-        h="50px"
+        h="54px"
+        fontSize="17px"
         bg="white"
         borderWidth="1px"
         borderColor="border.subtle"

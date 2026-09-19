@@ -1,4 +1,4 @@
-import { RoomView, ServerMessage } from '@bigtwo/rules';
+import { RoomSummary, RoomView, ServerMessage } from '@bigtwo/rules';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ConnectionStatus, GameConnection } from '../transport/connection.js';
 
@@ -19,9 +19,12 @@ export interface GameContextValue {
   readonly playerId: string | null;
   readonly name: string;
   readonly room: RoomView | null;
+  /** Rooms shown in the browser. Pushed by the server whenever they change. */
+  readonly rooms: readonly RoomSummary[];
   readonly error: ServerError | null;
-  createRoom(): void;
-  joinRoom(code: string): void;
+  createRoom(name: string, password: string): void;
+  joinRoom(code: string, password?: string): void;
+  refreshRooms(): void;
   leaveRoom(): void;
   setName(name: string): void;
   setReady(ready: boolean): void;
@@ -47,6 +50,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [name, setNameState] = useState(() => readStored(NAME_KEY) ?? '');
   const [room, setRoom] = useState<RoomView | null>(null);
+  const [rooms, setRooms] = useState<readonly RoomSummary[]>([]);
   const [error, setError] = useState<ServerError | null>(null);
   const connectionRef = useRef<GameConnection | null>(null);
 
@@ -67,6 +71,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
             case 'room':
               setRoom(message.room);
               setError(null);
+              break;
+            case 'rooms':
+              setRooms(message.rooms);
               break;
             case 'lobby':
               setRoom(null);
@@ -100,9 +107,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       playerId,
       name,
       room,
+      rooms,
       error,
-      createRoom: () => send({ type: 'create_room' }),
-      joinRoom: (code) => send({ type: 'join_room', code }),
+      createRoom: (roomName, password) => send({ type: 'create_room', name: roomName, password }),
+      joinRoom: (code, password) => send({ type: 'join_room', code, password }),
+      refreshRooms: () => send({ type: 'list_rooms' }),
       leaveRoom: () => send({ type: 'leave_room' }),
       setName: (next) => {
         setNameState(next);
@@ -118,7 +127,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       newMatch: () => send({ type: 'new_match' }),
       dismissError: () => setError(null),
     };
-  }, [status, playerId, name, room, error]);
+  }, [status, playerId, name, room, rooms, error]);
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }

@@ -23,10 +23,27 @@ export type RoomPhase = 'lobby' | 'playing' | 'finished';
 /** The whole room as one player may see it. */
 export interface RoomView {
   readonly code: string;
+  readonly name: string;
   readonly hostId: string;
   readonly phase: RoomPhase;
+  /** True when a password is required to join. The password itself never leaves the server. */
+  readonly isPrivate: boolean;
   readonly players: readonly PublicPlayer[];
   readonly match: PublicMatchState | null;
+}
+
+/**
+ * One row in the room list. Private rooms are listed like any other so players
+ * can see a game exists; only joining needs the password.
+ */
+export interface RoomSummary {
+  readonly code: string;
+  readonly name: string;
+  readonly hostName: string;
+  readonly playerCount: number;
+  readonly maxPlayers: number;
+  readonly isPrivate: boolean;
+  readonly phase: RoomPhase;
 }
 
 /** Maximum players a room will seat. */
@@ -42,8 +59,9 @@ export const MIN_PLAYERS = 2;
  */
 export type ClientMessage =
   | { type: 'hello'; requestId: string; sessionId: string | null; name: string }
-  | { type: 'create_room'; requestId: string }
-  | { type: 'join_room'; requestId: string; code: string }
+  | { type: 'create_room'; requestId: string; name?: string; password?: string }
+  | { type: 'join_room'; requestId: string; code: string; password?: string }
+  | { type: 'list_rooms'; requestId: string }
   | { type: 'leave_room'; requestId: string }
   | { type: 'set_name'; requestId: string; name: string }
   | { type: 'set_ready'; requestId: string; ready: boolean }
@@ -61,6 +79,7 @@ export type ErrorCode =
   | 'not_in_room'
   | 'room_not_found'
   | 'room_full'
+  | 'wrong_password'
   | 'match_in_progress'
   | 'not_host'
   | 'not_a_bot'
@@ -74,6 +93,7 @@ export type ErrorCode =
 export type ServerMessage =
   | { type: 'welcome'; requestId?: string; sessionId: string; playerId: string; name: string }
   | { type: 'room'; requestId?: string; room: RoomView; youId: string }
+  | { type: 'rooms'; requestId?: string; rooms: readonly RoomSummary[] }
   | { type: 'lobby'; requestId?: string }
   | { type: 'error'; requestId?: string; code: ErrorCode; message: string }
   | { type: 'pong'; requestId?: string };

@@ -1,5 +1,5 @@
 import { MAX_PLAYERS, MIN_PLAYERS, RoomView } from '@bigtwo/rules';
-import { Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
+import { Badge, Box, Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
 import { SeatList } from '../components/SeatList.js';
 import { useGame } from '../state/GameProvider.js';
 
@@ -16,70 +16,96 @@ export function LobbyScreen({ room }: LobbyScreenProps) {
   const enoughPlayers = room.players.length >= MIN_PLAYERS;
 
   return (
-    <Stack gap="24px">
-      <Flex align="flex-start" justify="space-between" gap="12px">
-        <Stack gap="2px">
-          <Text fontSize="11px" fontWeight="800" letterSpacing=".14em" textTransform="uppercase" color="fg.muted">
-            Room code
-          </Text>
-          <Heading fontFamily="heading" fontWeight="400" fontSize={{ base: '44px', md: '56px' }} lineHeight="1">
-            {room.code}
-          </Heading>
-        </Stack>
-        <Button colorPalette="forest" variant="ghost" size="sm" fontWeight="800" onClick={leaveRoom}>
-          Leave
-        </Button>
-      </Flex>
-
-      <SeatList room={room} youId={playerId} onRemoveBot={isHost ? removeBot : undefined} />
-
-      <Flex gap="10px" wrap="wrap" justify={isHost ? 'space-between' : 'flex-end'} align="center">
-        {isHost && (
+    <Box minH="100dvh" bg="bg.canvas" px={{ base: '20px', md: '48px' }} py={{ base: '22px', md: '40px' }}>
+      <Stack gap={{ base: '24px', md: '32px' }} maxW="1100px" mx="auto">
+        <Flex align="center" justify="space-between" gap="12px">
           <Button
+            variant="ghost"
             colorPalette="forest"
-            variant="outline"
-            borderRadius="pill"
-            fontWeight="800"
-            onClick={addBot}
-            disabled={room.players.length >= MAX_PLAYERS}
+            onClick={leaveRoom}
+            aria-label="Leave room"
+            fontSize="26px"
+            h="48px"
+            minW="48px"
+            px="0"
           >
-            + Add bot
+            ←
           </Button>
-        )}
-        {isHost ? (
-          <Button
-            colorPalette="brand"
-            borderRadius="pill"
-            px="28px"
-            fontWeight="800"
-            onClick={startMatch}
-            disabled={!enoughPlayers || !everyoneReady}
-          >
-            Start match
-          </Button>
-        ) : (
-          <Button
-            colorPalette={you?.ready ? 'forest' : 'brand'}
-            variant={you?.ready ? 'outline' : 'solid'}
-            borderRadius="pill"
-            px="28px"
-            fontWeight="800"
-            onClick={() => setReady(!you?.ready)}
-          >
-            {you?.ready ? 'Not ready' : "I'm ready"}
-          </Button>
-        )}
-      </Flex>
+          <Text fontSize="14px" fontWeight="800" letterSpacing=".14em" textTransform="uppercase" color="fg.muted">
+            Room
+          </Text>
+          <Box w="44px" />
+        </Flex>
 
-      <Text fontSize="13px" color="fg.subtle">
-        {!enoughPlayers
-          ? `Waiting for at least ${MIN_PLAYERS} players — share the code, or add a bot.`
-          : isHost
-            ? everyoneReady
-              ? 'Everyone is ready.'
-              : 'Waiting for the other players to be ready.'
-            : 'Waiting for the host to start the match.'}
-      </Text>
-    </Stack>
+        <Flex align="flex-end" justify="space-between" gap="16px" wrap="wrap">
+          <Stack gap="10px" minW="0">
+            <Heading fontFamily="heading" fontWeight="400" fontSize={{ base: '48px', md: '72px' }} lineHeight=".92">
+              {room.name}
+            </Heading>
+            <Flex align="center" gap="10px" wrap="wrap">
+              <Badge colorPalette={room.isPrivate ? 'brand' : 'forest'} variant={room.isPrivate ? 'solid' : 'subtle'}>
+                {room.isPrivate ? 'Private' : 'Public'}
+              </Badge>
+              <Text fontSize="16px" fontWeight="700" color="fg.muted">
+                Code {room.code}
+              </Text>
+            </Flex>
+          </Stack>
+
+          <Text fontSize="16px" color="fg.subtle" pb="10px">
+            {room.players.length} of {MAX_PLAYERS} seated
+          </Text>
+        </Flex>
+
+        <SeatList room={room} youId={playerId} onRemoveBot={isHost ? removeBot : undefined} />
+
+        <Flex gap="12px" wrap="wrap" align="center" justify={isHost ? 'space-between' : 'flex-end'}>
+          {isHost && (
+            <Button
+              colorPalette="forest"
+              variant="outline"
+              h="50px"
+              px="26px"
+              fontSize="16px"
+              onClick={addBot}
+              disabled={room.players.length >= MAX_PLAYERS}
+            >
+              + Add bot
+            </Button>
+          )}
+          {isHost ? (
+            <Button
+              colorPalette="brand"
+              h="48px"
+              px="34px"
+              onClick={startMatch}
+              disabled={!enoughPlayers || !everyoneReady}
+            >
+              Start match
+            </Button>
+          ) : (
+            <Button
+              colorPalette={you?.ready ? 'forest' : 'brand'}
+              variant={you?.ready ? 'outline' : 'solid'}
+              h="48px"
+              px="34px"
+              onClick={() => setReady(!you?.ready)}
+            >
+              {you?.ready ? 'Not ready' : "I'm ready"}
+            </Button>
+          )}
+        </Flex>
+
+        <Text fontSize="16px" color="fg.subtle">
+          {!enoughPlayers
+            ? `Waiting for at least ${MIN_PLAYERS} players — share the code, or add a bot.`
+            : isHost
+              ? everyoneReady
+                ? 'Everyone is ready.'
+                : 'Waiting for the other players to be ready.'
+              : 'Waiting for the host to start the match.'}
+        </Text>
+      </Stack>
+    </Box>
   );
 }

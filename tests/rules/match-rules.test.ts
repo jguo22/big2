@@ -1,6 +1,6 @@
-import { Card, cardValue, createMatch, MatchState, pass, playCards, redactMatch } from '@bigtwo/rules';
+import { botMove, Card, cardValue, createMatch, MatchState, pass, playCards, redactMatch } from '@bigtwo/rules';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { chooseMove, playerAt, seededRng } from '../helpers/simulate.js';
+import { playerAt, seededRng } from '../helpers/simulate.js';
 
 const PLAYERS = ['p0', 'p1', 'p2', 'p3'];
 
@@ -187,7 +187,7 @@ describe('full match simulation', () => {
 
     while (!state.winnerId && turns++ < 2000) {
       const actor = playerAt(state, state.turnSeat);
-      const move = chooseMove(state, actor);
+      const move = botMove(state, actor);
       state = expectOk(move ? playCards(state, actor, move) : pass(state, actor));
     }
 

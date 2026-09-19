@@ -64,7 +64,7 @@ function Seat({ player, isYou, isHost, isTurn, hasPassed, showHandCount, onRemov
           borderRadius="full"
           bg={player.isBot ? 'fg.subtle' : player.connected ? '#5f9e70' : 'fg.subtle'}
         />
-        <Text fontWeight="700" fontSize="14px" truncate>
+        <Text fontWeight="700" fontSize="17px" truncate>
           {player.name}
           {isYou ? ' (you)' : ''}
         </Text>
@@ -84,7 +84,9 @@ function Seat({ player, isYou, isHost, isTurn, hasPassed, showHandCount, onRemov
         )}
       </Flex>
 
-      <Stack direction="row" gap="6px" mt="8px" wrap="wrap" align="center">
+      {/* Reserved height: badges come and go as players ready up or pass, and
+          a seat that resizes would reflow its whole grid row. */}
+      <Stack direction="row" gap="6px" mt="8px" minH="22px" wrap="wrap" align="center">
         {isHost && (
           <Badge colorPalette="forest" variant="subtle">
             Host
@@ -106,7 +108,7 @@ function Seat({ player, isYou, isHost, isTurn, hasPassed, showHandCount, onRemov
           </Badge>
         )}
         {showHandCount ? (
-          <Text fontSize="12px" color="fg.muted" fontWeight="600">
+          <Text fontSize="15px" color="fg.muted" fontWeight="600">
             {player.handCount} card{player.handCount === 1 ? '' : 's'}
           </Text>
         ) : (

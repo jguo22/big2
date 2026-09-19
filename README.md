@@ -42,9 +42,21 @@ npm run dev:server
 npm run dev:client
 ```
 
-Open the client in two or more browser tabs (or devices on the same network),
-create a room in one, and join with the 4-character code in the others. Or add
-bots from the lobby and play alone.
+Enter a name, then pick a room from the browser or create your own. Open the
+client in two or more browser tabs (or devices on the same network) to play
+together, or add bots from the room and play alone.
+
+## Rooms
+
+The browser lists every room on the server with its name, host, player count
+and whether it is public or private. Private rooms are listed like any other —
+seeing that a game exists is harmless; joining one needs the password the host
+set when creating it.
+
+Passwords are stored as salted scrypt hashes, never as plaintext and never in
+the snapshot on disk, and no room summary or room view ever carries password
+material. A player already seated skips the check, so a reconnect or refresh
+never has to re-enter it.
 
 Point the client at a different server with `VITE_WS_URL`:
 
@@ -64,10 +76,13 @@ npm run typecheck # tsc across all three workspaces
 The host can fill empty seats with bots from the lobby, up to four players
 total. Bots are always ready, hold no session, and receive no broadcasts.
 
-The current policy is to pass whenever there is a play to beat. A bot that is
-leading cannot pass — the rules forbid it, and nobody could ever play if they
-could — so a leading bot plays its weakest single instead. Bot turns resolve
-synchronously, so one action produces one broadcast.
+A bot plays the lowest combination it legally can, and passes only when it
+holds nothing that beats the current play. "Lowest" orders plays by card count
+first and then by comparison key, so a bot spends its weakest cards first.
+
+A leading bot always plays, because the rules forbid passing on a lead and
+nobody could ever play if they did not. Bot turns resolve synchronously, so one
+action produces one broadcast.
 
 ## Rules decisions
 

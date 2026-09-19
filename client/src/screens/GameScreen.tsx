@@ -1,6 +1,6 @@
 import { beats, Card, detectCombination, PublicPlayer, RoomView } from '@bigtwo/rules';
 import { Box, Button, Flex, Text } from '@chakra-ui/react';
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActionBar } from '../components/ActionBar.js';
 import { Hand } from '../components/Hand.js';
 import { OpponentSeat, SeatPosition } from '../components/OpponentSeat.js';
@@ -10,8 +10,6 @@ import { ResultOverlay } from './ResultOverlay.js';
 
 export interface GameScreenProps {
   room: RoomView;
-  /** Connection and error banner, rendered by App so every screen shares one. */
-  banner: ReactNode;
 }
 
 /**
@@ -25,7 +23,7 @@ const SEAT_LAYOUT: Record<number, SeatPosition[]> = {
 };
 
 /** The match view: a felt table with the opponents seated around it. */
-export function GameScreen({ room, banner }: GameScreenProps) {
+export function GameScreen({ room }: GameScreenProps) {
   const { playerId, play, pass, leaveRoom } = useGame();
   const match = room.match!;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -64,9 +62,6 @@ export function GameScreen({ room, banner }: GameScreenProps) {
         <Text fontSize="12px" fontWeight="800" letterSpacing=".1em" color="whiteAlpha.700">
           {room.code}
         </Text>
-        <Box flex="1" maxW="420px">
-          {banner}
-        </Box>
         <Button
           onClick={leaveRoom}
           variant="ghost"

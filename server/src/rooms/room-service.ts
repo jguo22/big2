@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { botMove, MAX_PLAYERS, MIN_PLAYERS, pass, playCards, redactMatch, RoomView } from '@bigtwo/rules';
+import { RoomSummary } from '@bigtwo/rules';
 import { ActionError } from '../errors.js';
 import { applyPass, applyPlay, startMatch } from '../matches/match-service.js';
 import { SnapshotStore } from '../persistence/store.js';
+import { hashPassword, verifyPassword } from './password.js';
 import { Room, ServerPlayer, Session } from './types.js';
 
 /** Characters used in room codes. Ambiguous glyphs (I, O, 0, 1) are excluded. */
@@ -79,13 +81,19 @@ export class RoomService {
   /**
    * Creates a room with `session` as host and first seat.
    *
+   * Params:
+   *   name: host-chosen room name. Blank falls back to "<host>'s table".
+   *   password: blank or omitted leaves the room public; otherwise joining
+   *     requires this password, which is stored only as a salted hash.
    * Returns: the new room.
    */
-  createRoom(session: Session): Room {
+  createRoom(session: Session, name = '', password = ''): Room {
     this.leaveRoom(session);
     const room: Room = {
       code: this.freshCode(),
+      name: sanitizeRoomName(name) || `${session.name}'s table`,
       hostId: session.playerId,
+      password: password.trim() ? hashPassword(password.trim()) : null,
       phase: 'lobby',
       players: [],
       match: null,
@@ -104,11 +112,13 @@ export class RoomService {
    * Params:
    *   session: the joining session.
    *   code: room code, case-insensitive.
+   *   password: required when the room is private. Ignored for a player
+   *     already seated, so a reconnect never has to re-enter it.
    * Returns: the room.
-   * Raises: `ActionError` with `room_not_found`, `room_full`, or
-   *   `match_in_progress` when a stranger tries to join a running match.
+   * Raises: `ActionError` with `room_not_found`, `wrong_password`, `room_full`,
+   *   or `match_in_progress` when a stranger tries to join a running match.
    */
-  joinRoom(session: Session, code: string): Room {
+  joinRoom(session: Session, code: string, password = ''): Room {
     const room = this.rooms.get(code.trim().toUpperCase());
     if (!room) throw new ActionError('room_not_found', 'No room with that code.');
 
@@ -119,6 +129,9 @@ export class RoomService {
       session.roomCode = room.code;
       this.persist();
       return room;
+    }
+    if (room.password && !verifyPassword(password, room.password)) {
+      throw new ActionError('wrong_password', 'That password is not right.');
     }
     if (room.phase !== 'lobby') {
       throw new ActionError('match_in_progress', 'That room is already playing a match.');
@@ -314,8 +327,10 @@ export class RoomService {
     const match = room.match ? redactMatch(room.match, viewerId) : null;
     return {
       code: room.code,
+      name: room.name,
       hostId: room.hostId,
       phase: room.phase,
+      isPrivate: room.password !== null,
       players: room.players.map((player) => ({
         id: player.id,
         name: player.name,
@@ -327,6 +342,33 @@ export class RoomService {
       })),
       match,
     };
+  }
+
+  /**
+   * Lists every room for the lobby browser, newest activity first.
+   *
+   * Private rooms are included so players can see the game exists; only the
+   * password itself is withheld, and joining still requires it.
+   *
+   * Returns: one summary per room. Never includes hands or password material.
+   */
+  listRooms(): RoomSummary[] {
+    return [...this.rooms.values()]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .map((room) => ({
+        code: room.code,
+        name: room.name,
+        hostName: room.players.find((player) => player.id === room.hostId)?.name ?? 'Unknown',
+        playerCount: room.players.length,
+        maxPlayers: MAX_PLAYERS,
+        isPrivate: room.password !== null,
+        phase: room.phase,
+      }));
+  }
+
+  /** Every session that is not currently seated, for room-list broadcasts. */
+  lobbySessions(): Session[] {
+    return [...this.sessions.values()].filter((session) => session.roomCode === null);
   }
 
   /** Drops rooms whose players have all been gone longer than the abandon window. */
@@ -453,4 +495,8 @@ export class RoomService {
 function sanitizeName(name: string): string {
   const trimmed = name.replace(/\s+/g, ' ').trim().slice(0, 20);
   return trimmed || 'Player';
+}
+
+function sanitizeRoomName(name: string): string {
+  return name.replace(/\s+/g, ' ').trim().slice(0, 30);
 }

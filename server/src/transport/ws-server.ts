@@ -151,6 +151,8 @@ export function attachGameSocket(httpServer: HttpServer, rooms: RoomService): ()
         broadcastRoom(room);
         return null;
       }
+      // Not seated, so this client is browsing: prime it with the room list.
+      send(connection.socket, { type: 'rooms', rooms: rooms.listRooms() });
       return { type: 'lobby', requestId: message.requestId };
     }
 
@@ -173,13 +175,25 @@ export function attachGameSocket(httpServer: HttpServer, rooms: RoomService): ()
         const previous = rooms.roomOf(session);
         rooms.leaveRoom(session);
         if (previous) broadcastRoom(previous);
+        broadcastRoomList();
         return { type: 'lobby', requestId: message.requestId };
       }
 
+      case 'list_rooms':
+        return { type: 'rooms', requestId: message.requestId, rooms: rooms.listRooms() };
+
       case 'create_room':
-        return afterMutation(rooms.createRoom(session), session, message.requestId);
+        return afterMutation(
+          rooms.createRoom(session, String(message.name ?? ''), String(message.password ?? '')),
+          session,
+          message.requestId,
+        );
       case 'join_room':
-        return afterMutation(rooms.joinRoom(session, String(message.code ?? '')), session, message.requestId);
+        return afterMutation(
+          rooms.joinRoom(session, String(message.code ?? ''), String(message.password ?? '')),
+          session,
+          message.requestId,
+        );
       case 'set_ready':
         return afterMutation(rooms.setReady(session, message.ready === true), session, message.requestId);
       case 'add_bot':
@@ -206,7 +220,19 @@ export function attachGameSocket(httpServer: HttpServer, rooms: RoomService): ()
   /** Broadcasts the changed room and returns the sender's own acknowledged view. */
   function afterMutation(room: Room, session: Session, requestId: string): ServerMessage {
     broadcastRoom(room, session.id);
+    broadcastRoomList();
     return { type: 'room', requestId, room: rooms.viewFor(room, session.playerId), youId: session.playerId };
+  }
+
+  /**
+   * Pushes the room list to everyone who is browsing rather than seated, so a
+   * room appearing, filling up or starting shows without a refresh.
+   */
+  function broadcastRoomList(): void {
+    const payload: ServerMessage = { type: 'rooms', rooms: rooms.listRooms() };
+    for (const session of rooms.lobbySessions()) {
+      for (const socket of socketsBySession.get(session.id) ?? []) send(socket, payload);
+    }
   }
 
   /**

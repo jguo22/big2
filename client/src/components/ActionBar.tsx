@@ -37,11 +37,20 @@ export function ActionBar({
         {playerName} · {handCount} card{handCount === 1 ? '' : 's'}
       </Text>
 
-      {blocked && (
-        <Text aria-live="polite" color="coral" fontSize="11px" fontWeight="700" mb="6px">
-          {blockedReason}
-        </Text>
-      )}
+      {/* Height is reserved whether or not there is a reason to show, so the
+          buttons never jump when a selection becomes illegal. */}
+      <Text
+        aria-live="polite"
+        color="coral"
+        fontSize="11px"
+        fontWeight="700"
+        mb="6px"
+        h="14px"
+        opacity={blocked ? 1 : 0}
+        transition="opacity .15s"
+      >
+        {blockedReason ?? ''}
+      </Text>
 
       <Flex justify="center" gap="8px">
         <Button

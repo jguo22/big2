@@ -33,6 +33,11 @@ const cards: Card[] = [
   { id: 'jh', rank: 'J', suit: 'hearts', symbol: '♥', red: true },
   { id: 'qs', rank: 'Q', suit: 'spades', symbol: '♠' },
   { id: 'kc', rank: 'K', suit: 'clubs', symbol: '♣' },
+  { id: 'as', rank: 'A', suit: 'spades', symbol: '♠' },
+  { id: '2h', rank: '2', suit: 'hearts', symbol: '♥', red: true },
+  { id: '9d', rank: '9', suit: 'diamonds', symbol: '♦', red: true },
+  { id: '4c', rank: '4', suit: 'clubs', symbol: '♣' },
+  { id: '6s', rank: '6', suit: 'spades', symbol: '♠' },
 ]
 
 const rooms: Room[] = [
@@ -141,7 +146,7 @@ function RoomsPage({ onBack, onCreate, onRoom }: { onBack: () => void; onCreate:
 function GamePage({ roomName, playerName, selected, onBack, onToggle, onPlay }: { roomName: string; playerName: string; selected: string[]; onBack: () => void; onToggle: (id: string) => void; onPlay: () => void }) {
   const selectedCards = cards.filter((card) => selected.includes(card.id))
   const validCombo = isValidCombo(selectedCards)
-  return <Box minH="100vh" position="relative" className="felt-pattern"><Flex justify="flex-end" position="absolute" top={{ base: '14px', md: '24px' }} left={{ base: '18px', md: '32px' }} right={{ base: '18px', md: '32px' }} zIndex="5"><Button onClick={onBack} variant="ghost" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: 'whiteAlpha.200' }}>Exit</Button></Flex><Box w="100%" h="100vh" minH="560px" position="relative" overflow="hidden"><PlayerSeat position="top" name="Mina" count="11 cards" cards={5} /><PlayerSeat position="left" name="Owen" count="9 cards" cards={4} /><PlayerSeat position="right" name="Sofia" count="13 cards" cards={6} /><Box position="absolute" inset="25% 17% 28%" border="1px solid" borderColor="whiteAlpha.200" borderRadius="24px" display="flex" alignItems="center" justifyContent="center"><VStack spacing="10px"><Box px="14px" py="7px" bg="blackAlpha.200" borderRadius="999px"><Text fontSize="10px" fontWeight="800" letterSpacing=".14em" textTransform="uppercase" color="whiteAlpha.800">Mina's turn</Text></Box><Text color="whiteAlpha.500" fontSize="13px">Play a higher hand or pass</Text></VStack></Box><Box position="absolute" bottom={{ base: '112px', md: '126px' }} left="50%" transform="translateX(-50%)" w={{ base: '95%', md: '72%' }}><Hand cards={cards} selected={selected} onToggle={onToggle} /></Box><Box position="absolute" bottom="18px" left="50%" transform="translateX(-50%)" textAlign="center"><Text color="white" fontWeight="800" fontSize="13px" mb="6px">{playerName}</Text><Flex justify="center" gap="8px"><Button onClick={onPlay} isDisabled={!validCombo} h="40px" px="24px" borderRadius="999px" bg="coral" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: '#d85e3d' }}>Play {selected.length > 0 && `(${selected.length})`}</Button><Button h="40px" px="22px" borderRadius="999px" bg="whiteAlpha.200" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: 'whiteAlpha.300' }}>Pass</Button></Flex></Box></Box></Box>
+  return <Box minH="100vh" position="relative" className="felt-pattern"><Flex justify="flex-end" position="absolute" top={{ base: '14px', md: '24px' }} left={{ base: '18px', md: '32px' }} right={{ base: '18px', md: '32px' }} zIndex="5"><Button onClick={onBack} variant="ghost" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: 'whiteAlpha.200' }}>Exit</Button></Flex><Box w="100%" h="100vh" minH="560px" position="relative" overflow="hidden"><PlayerSeat position="top" name="Mina" count="11 cards" cards={5} /><PlayerSeat position="left" name="Owen" count="9 cards" cards={4} /><PlayerSeat position="right" name="Sofia" count="13 cards" cards={6} /><Box position="absolute" inset="22% 13% 18%" border="1px solid" borderColor="whiteAlpha.200" borderRadius="24px" display="flex" alignItems="center" justifyContent="center"><VStack spacing="10px"><Box px="14px" py="7px" bg="blackAlpha.200" borderRadius="999px"><Text fontSize="10px" fontWeight="800" letterSpacing=".14em" textTransform="uppercase" color="whiteAlpha.800">Mina's turn</Text></Box><Text color="whiteAlpha.500" fontSize="13px">Play a higher hand or pass</Text></VStack></Box><Box position="absolute" top="75%" left="50%" transform="translate(-50%, -50%)" w="74vw"><Hand cards={cards} selected={selected} onToggle={onToggle} /></Box><Box position="absolute" bottom="18px" left="50%" transform="translateX(-50%)" textAlign="center"><Text color="white" fontWeight="800" fontSize="13px" mb="6px">{playerName}</Text><Flex justify="center" gap="8px"><Button onClick={onPlay} isDisabled={!validCombo} h="40px" px="24px" borderRadius="999px" bg="coral" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: '#d85e3d' }}>Play {selected.length > 0 && `(${selected.length})`}</Button><Button h="40px" px="22px" borderRadius="999px" bg="whiteAlpha.200" color="white" fontSize="12px" fontWeight="800" _hover={{ bg: 'whiteAlpha.300' }}>Pass</Button></Flex></Box></Box></Box>
 }
 
 function isValidCombo(hand: Card[]) {
@@ -168,7 +173,18 @@ function PlayerSeat({ position, name, count, cards: cardCount }: { position: 'to
 }
 
 function Hand({ cards: hand, selected, onToggle }: { cards: Card[]; selected: string[]; onToggle: (id: string) => void }) {
-  return <Flex justify="center" align="end" h={{ base: '100px', md: '130px' }}>{hand.map((card, index) => { const isSelected = selected.includes(card.id); return <Box key={card.id} as="button" onClick={() => onToggle(card.id)} aria-label={`${card.rank} of ${card.suit}`} position="relative" w={{ base: '48px', md: '76px' }} h={{ base: '72px', md: '112px' }} ml={index === 0 ? '0' : { base: '3px', md: '6px' }} zIndex={isSelected ? 20 : 10 + index} transform={`translateY(${isSelected ? '-20px' : '0'})`} transition="transform .18s ease"><Box h="100%" w="100%" bg="#fffdf6" borderRadius="5px" border="1px solid" borderColor="black" position="relative" overflow="hidden"><Text position="absolute" top={{ base: '5px', md: '8px' }} left={{ base: '7px', md: '10px' }} fontFamily="heading" fontSize={{ base: '18px', md: '27px' }} lineHeight="1" color={card.red ? 'coral' : 'ink'}>{card.rank}</Text><Text position="absolute" top={{ base: '23px', md: '39px' }} left={{ base: '8px', md: '11px' }} fontSize={{ base: '14px', md: '20px' }} color={card.red ? 'coral' : 'ink'}>{card.symbol}</Text><Text position="absolute" bottom={{ base: '7px', md: '9px' }} right={{ base: '7px', md: '10px' }} fontSize={{ base: '19px', md: '28px' }} color={card.red ? 'coral' : 'ink'} transform="rotate(180deg)">{card.symbol}</Text></Box></Box> })}</Flex>
+  return <Flex justify="center" align="center" h="auto">
+    {hand.map((card, index) => {
+      const isSelected = selected.includes(card.id)
+      const cardColor = card.red ? 'coral' : 'ink'
+      return <Box key={card.id} as="button" onClick={() => onToggle(card.id)} aria-label={`${card.rank} of ${card.suit}`} position="relative" flex="0 0 auto" w="5.3vw" aspectRatio="2 / 3" ml={index === 0 ? '0' : { base: '-2px', md: '-4px' }} opacity={isSelected ? 0.6 : 1} transition="none">
+        <Box h="100%" w="100%" bg="#fffdf6" border="1px solid" borderColor="blackAlpha.500" borderRadius="3px" position="relative" overflow="hidden">
+          <Text position="absolute" top=".6vw" left=".6vw" fontFamily="heading" fontSize="1.65vw" lineHeight=".9" color={cardColor}>{card.rank}</Text>
+          <Text position="absolute" inset="0" display="flex" alignItems="center" justifyContent="center" pt="1.2vw" color={cardColor} fontSize="3.2vw" lineHeight="1">{card.symbol}</Text>
+        </Box>
+      </Box>
+    })}
+  </Flex>
 }
 
 export default App

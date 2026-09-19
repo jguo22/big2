@@ -1,5 +1,17 @@
 import { randomUUID } from 'node:crypto';
-import { botMove, MAX_PLAYERS, MIN_PLAYERS, pass, playCards, redactMatch, RoomView } from '@bigtwo/rules';
+import {
+  botMove,
+  DEFAULT_BOT_SPEED_MS,
+  MAX_BOT_SPEED_MS,
+  MAX_PLAYERS,
+  MIN_BOT_SPEED_MS,
+  MIN_PLAYERS,
+  pass,
+  playCards,
+  redactMatch,
+  RoomSettings,
+  RoomView,
+} from '@bigtwo/rules';
 import { RoomSummary } from '@bigtwo/rules';
 import { ActionError } from '../errors.js';
 import { applyPass, applyPlay, startMatch } from '../matches/match-service.js';
@@ -24,6 +36,9 @@ const ABANDONED_ROOM_MS = 30 * 60 * 1000;
 export class RoomService {
   private readonly rooms = new Map<string, Room>();
   private readonly sessions = new Map<string, Session>();
+  /** Pending bot turns, keyed by room code; at most one per room. */
+  private readonly botTimers = new Map<string, NodeJS.Timeout>();
+  private roomChanged: ((room: Room) => void) | null = null;
 
   constructor(private readonly store: SnapshotStore) {}
 
@@ -33,9 +48,25 @@ export class RoomService {
     if (!snapshot) return;
     for (const room of snapshot.rooms) {
       for (const player of room.players) player.connected = false;
+      room.settings = sanitizeSettings(room.settings);
       this.rooms.set(room.code, room);
+      // A snapshot may have been taken while a bot was on turn; without this
+      // the restored match would sit wedged on that seat forever.
+      this.scheduleBots(room);
     }
     for (const session of snapshot.sessions) this.sessions.set(session.id, session);
+  }
+
+  /**
+   * Registers the callback invoked after a bot move changes a room, so the
+   * transport can broadcast state that no client action produced. Only one
+   * listener is kept; a later call replaces an earlier one.
+   *
+   * Params:
+   *   listener: receives the changed room, already mutated and persisted.
+   */
+  observeRooms(listener: (room: Room) => void): void {
+    this.roomChanged = listener;
   }
 
   /**
@@ -85,15 +116,18 @@ export class RoomService {
    *   name: host-chosen room name. Blank falls back to "<host>'s table".
    *   password: blank or omitted leaves the room public; otherwise joining
    *     requires this password, which is stored only as a salted hash.
+   *   settings: advanced settings; each omitted or unusable field falls back to
+   *     its default, and values out of range are clamped rather than refused.
    * Returns: the new room.
    */
-  createRoom(session: Session, name = '', password = ''): Room {
+  createRoom(session: Session, name = '', password = '', settings: Partial<RoomSettings> = {}): Room {
     this.leaveRoom(session);
     const room: Room = {
       code: this.freshCode(),
       name: sanitizeRoomName(name) || `${session.name}'s table`,
       hostId: session.playerId,
       password: password.trim() ? hashPassword(password.trim()) : null,
+      settings: sanitizeSettings(settings),
       phase: 'lobby',
       players: [],
       match: null,
@@ -162,11 +196,13 @@ export class RoomService {
     // A room of nothing but bots has nobody to play against and nobody to
     // broadcast to, so it goes away with the last person.
     if (!room.players.some((player) => !player.isBot)) {
+      this.cancelBots(room);
       this.rooms.delete(room.code);
       this.persist();
       return;
     }
     if (wasSeated && room.phase === 'playing') {
+      this.cancelBots(room);
       room.match = null;
       room.phase = 'lobby';
       for (const player of room.players) player.ready = player.isBot;
@@ -255,8 +291,8 @@ export class RoomService {
     this.reseat(room);
     room.match = startMatch(room.players.map((seated) => seated.id));
     room.phase = 'playing';
-    this.runBots(room);
     this.touch(room);
+    this.scheduleBots(room);
     return room;
   }
 
@@ -273,8 +309,8 @@ export class RoomService {
     const { room, player } = this.requireActiveMatch(session);
     room.match = applyPlay(room.match!, player.id, cardIds);
     if (room.match.winnerId) room.phase = 'finished';
-    this.runBots(room);
     this.touch(room);
+    this.scheduleBots(room);
     return room;
   }
 
@@ -286,8 +322,8 @@ export class RoomService {
   pass(session: Session): Room {
     const { room, player } = this.requireActiveMatch(session);
     room.match = applyPass(room.match!, player.id);
-    this.runBots(room);
     this.touch(room);
+    this.scheduleBots(room);
     return room;
   }
 
@@ -297,6 +333,7 @@ export class RoomService {
     if (room.phase === 'playing') {
       throw new ActionError('match_in_progress', 'Finish the current match first.');
     }
+    this.cancelBots(room);
     room.match = null;
     room.phase = 'lobby';
     for (const player of room.players) player.ready = player.isBot || player.id === room.hostId;
@@ -331,6 +368,7 @@ export class RoomService {
       hostId: room.hostId,
       phase: room.phase,
       isPrivate: room.password !== null,
+      settings: room.settings,
       players: room.players.map((player) => ({
         id: player.id,
         name: player.name,
@@ -381,6 +419,7 @@ export class RoomService {
           !player.isBot && (player.connected || now - player.lastSeenAt < ABANDONED_ROOM_MS),
       );
       if (active) continue;
+      this.cancelBots(room);
       this.rooms.delete(room.code);
       for (const session of this.sessionsInRoom(room)) session.roomCode = null;
       changed = true;
@@ -389,31 +428,59 @@ export class RoomService {
   }
 
   /**
-   * Plays out every consecutive bot turn, so that by the time the room is
-   * broadcast the turn has come back round to a person (or the match is over).
-   * Runs synchronously: one state change, one broadcast.
+   * Queues the bot on turn, if any, to move after the room's bot speed. Each
+   * move broadcasts on its own and queues the next, so players watch bots play
+   * one seat at a time. Replaces any move already queued for this room.
    */
-  private runBots(room: Room): void {
-    // One guard iteration per possible turn; a bot either plays a card or
-    // passes, so this cannot spin.
-    for (let guard = 0; guard < 500; guard++) {
-      const match = room.match;
-      if (room.phase !== 'playing' || !match || match.winnerId) return;
+  private scheduleBots(room: Room): void {
+    this.cancelBots(room);
+    if (!this.botOnTurn(room)) return;
+    const timer = setTimeout(() => {
+      this.botTimers.delete(room.code);
+      this.playBotTurn(room);
+    }, room.settings.botSpeedMs);
+    // A queued bot turn must not keep the process alive on shutdown.
+    timer.unref();
+    this.botTimers.set(room.code, timer);
+  }
 
-      const onTurn = room.players.find((player) => player.seat === match.turnSeat);
-      if (!onTurn?.isBot) return;
+  /** Drops the move queued for `room`, if any. */
+  private cancelBots(room: Room): void {
+    const timer = this.botTimers.get(room.code);
+    if (!timer) return;
+    clearTimeout(timer);
+    this.botTimers.delete(room.code);
+  }
 
-      const move = botMove(match, onTurn.id);
-      const result = move ? playCards(match, onTurn.id, move) : pass(match, onTurn.id);
-      if (!result.ok) {
-        // A bot should never produce an illegal move. Stop rather than spin,
-        // and leave the turn where it is so the room is not wedged silently.
-        console.error(`[bots] ${onTurn.name} produced an illegal move: ${result.rejection.code}`);
-        return;
-      }
-      room.match = result.state;
-      if (result.state.winnerId) room.phase = 'finished';
+  /** Plays the queued bot's move, announces it, and queues whoever is next. */
+  private playBotTurn(room: Room): void {
+    // The room may have been abandoned or restarted while the move was queued.
+    if (this.rooms.get(room.code) !== room) return;
+    const bot = this.botOnTurn(room);
+    if (!bot) return;
+
+    const match = room.match!;
+    const move = botMove(match, bot.id);
+    const result = move ? playCards(match, bot.id, move) : pass(match, bot.id);
+    if (!result.ok) {
+      // A bot should never produce an illegal move. Stop rather than retry, and
+      // leave the turn where it is so the room is not wedged silently.
+      console.error(`[bots] ${bot.name} produced an illegal move: ${result.rejection.code}`);
+      return;
     }
+    room.match = result.state;
+    if (result.state.winnerId) room.phase = 'finished';
+    this.touch(room);
+    this.roomChanged?.(room);
+    this.scheduleBots(room);
+  }
+
+  /** The bot whose turn it is in a running match, or `null`. */
+  private botOnTurn(room: Room): ServerPlayer | null {
+    const match = room.match;
+    if (room.phase !== 'playing' || !match || match.winnerId) return null;
+    const onTurn = room.players.find((player) => player.seat === match.turnSeat);
+    return onTurn?.isBot ? onTurn : null;
   }
 
   /** Lowest unused "Bot N" name in the room, so removing and re-adding reuses names. */
@@ -499,4 +566,13 @@ function sanitizeName(name: string): string {
 
 function sanitizeRoomName(name: string): string {
   return name.replace(/\s+/g, ' ').trim().slice(0, 30);
+}
+
+/** Fills in defaults and clamps each setting, so no client value can be trusted in. */
+function sanitizeSettings(settings: Partial<RoomSettings> | undefined): RoomSettings {
+  const requested = Number(settings?.botSpeedMs);
+  const botSpeedMs = Number.isFinite(requested)
+    ? Math.min(MAX_BOT_SPEED_MS, Math.max(MIN_BOT_SPEED_MS, Math.round(requested)))
+    : DEFAULT_BOT_SPEED_MS;
+  return { botSpeedMs };
 }

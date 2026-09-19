@@ -1,3 +1,4 @@
+import { DEFAULT_BOT_SPEED_MS, MAX_BOT_SPEED_MS, MIN_BOT_SPEED_MS } from '@bigtwo/rules';
 import { Box, Button, Heading, Stack, Text } from '@chakra-ui/react';
 import { useState } from 'react';
 import { LabeledInput } from '../components/LabeledInput.js';
@@ -13,6 +14,8 @@ export function CreateRoomScreen({ onBack }: CreateRoomScreenProps) {
   const { createRoom, status } = useGame();
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
+  const [botSpeedMs, setBotSpeedMs] = useState(String(DEFAULT_BOT_SPEED_MS));
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const offline = status !== 'open';
 
   return (
@@ -53,7 +56,10 @@ export function CreateRoomScreen({ onBack }: CreateRoomScreenProps) {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            createRoom(name, password);
+            const requested = Number(botSpeedMs);
+            createRoom(name, password, {
+              botSpeedMs: Number.isFinite(requested) ? requested : DEFAULT_BOT_SPEED_MS,
+            });
             onBack();
           }}
         >
@@ -78,6 +84,35 @@ export function CreateRoomScreen({ onBack }: CreateRoomScreenProps) {
                   ? 'Players will need this password to join.'
                   : 'Anyone can join a room without a password.'}
               </Text>
+            </Box>
+
+            <Box>
+              <Button
+                variant="ghost"
+                colorPalette="forest"
+                px="0"
+                fontSize="15px"
+                onClick={() => setAdvancedOpen((open) => !open)}
+                aria-expanded={advancedOpen}
+              >
+                {advancedOpen ? '▾' : '▸'} Advanced settings
+              </Button>
+              {advancedOpen && (
+                <Box mt="12px">
+                  <LabeledInput
+                    label="Bot play speed (ms)"
+                    value={botSpeedMs}
+                    onValueChange={setBotSpeedMs}
+                    type="number"
+                    min={MIN_BOT_SPEED_MS}
+                    max={MAX_BOT_SPEED_MS}
+                    placeholder={String(DEFAULT_BOT_SPEED_MS)}
+                  />
+                  <Text fontSize="15px" color="fg.subtle" mt="8px">
+                    How long each bot waits before making its move.
+                  </Text>
+                </Box>
+              )}
             </Box>
 
             <Button type="submit" colorPalette="brand" h="54px" fontSize="17px" disabled={offline}>

@@ -115,7 +115,13 @@ export function GameScreen({ room }: GameScreenProps) {
           w="74vw"
           zIndex={GAME_LAYERS.hand}
         >
-          <Hand cards={match.yourHand} selectedIds={selectedIds} disabled={!isYourTurn} onToggle={toggle} />
+          <Hand
+            cards={match.yourHand}
+            selectedIds={selectedIds}
+            disabled={!isYourTurn}
+            onToggle={toggle}
+            onSelect={setSelectedIds}
+          />
         </Box>
 
         <Text

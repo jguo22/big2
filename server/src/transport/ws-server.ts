@@ -44,6 +44,13 @@ export function attachGameSocket(httpServer: HttpServer, rooms: RoomService): ()
   const socketsBySession = new Map<string, Set<WebSocket>>();
   const requestCache = new Map<string, Map<string, ServerMessage>>();
 
+  // Bots move on their own timer, so their state changes have no request to
+  // reply to and must be pushed out here.
+  rooms.observeRooms((room) => {
+    broadcastRoom(room);
+    broadcastRoomList();
+  });
+
   wss.on('connection', (socket: WebSocket, request: IncomingMessage) => {
     const connection: Connection = {
       socket,
@@ -184,7 +191,12 @@ export function attachGameSocket(httpServer: HttpServer, rooms: RoomService): ()
 
       case 'create_room':
         return afterMutation(
-          rooms.createRoom(session, String(message.name ?? ''), String(message.password ?? '')),
+          rooms.createRoom(
+            session,
+            String(message.name ?? ''),
+            String(message.password ?? ''),
+            message.settings ?? {},
+          ),
           session,
           message.requestId,
         );

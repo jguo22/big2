@@ -1,4 +1,4 @@
-import { RoomSummary, RoomView, ServerMessage } from '@bigtwo/rules';
+import { RoomSettings, RoomSummary, RoomView, ServerMessage } from '@bigtwo/rules';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ConnectionStatus, GameConnection } from '../transport/connection.js';
 
@@ -22,7 +22,8 @@ export interface GameContextValue {
   /** Rooms shown in the browser. Pushed by the server whenever they change. */
   readonly rooms: readonly RoomSummary[];
   readonly error: ServerError | null;
-  createRoom(name: string, password: string): void;
+  /** Creates a room; omitted settings take the server's defaults. */
+  createRoom(name: string, password: string, settings?: Partial<RoomSettings>): void;
   joinRoom(code: string, password?: string): void;
   refreshRooms(): void;
   leaveRoom(): void;
@@ -109,7 +110,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       room,
       rooms,
       error,
-      createRoom: (roomName, password) => send({ type: 'create_room', name: roomName, password }),
+      createRoom: (roomName, password, settings) =>
+        send({ type: 'create_room', name: roomName, password, settings }),
       joinRoom: (code, password) => send({ type: 'join_room', code, password }),
       refreshRooms: () => send({ type: 'list_rooms' }),
       leaveRoom: () => send({ type: 'leave_room' }),

@@ -20,6 +20,19 @@ export interface PublicPlayer {
 
 export type RoomPhase = 'lobby' | 'playing' | 'finished';
 
+/** The host's advanced settings for a room, chosen once at creation. */
+export interface RoomSettings {
+  /** Milliseconds a bot waits before each of its moves. */
+  readonly botSpeedMs: number;
+}
+
+/** Value used when the host does not choose a bot speed. */
+export const DEFAULT_BOT_SPEED_MS = 500;
+
+/** Inclusive bounds the server clamps `RoomSettings.botSpeedMs` to. */
+export const MIN_BOT_SPEED_MS = 0;
+export const MAX_BOT_SPEED_MS = 10_000;
+
 /** The whole room as one player may see it. */
 export interface RoomView {
   readonly code: string;
@@ -28,6 +41,7 @@ export interface RoomView {
   readonly phase: RoomPhase;
   /** True when a password is required to join. The password itself never leaves the server. */
   readonly isPrivate: boolean;
+  readonly settings: RoomSettings;
   readonly players: readonly PublicPlayer[];
   readonly match: PublicMatchState | null;
 }
@@ -59,7 +73,14 @@ export const MIN_PLAYERS = 2;
  */
 export type ClientMessage =
   | { type: 'hello'; requestId: string; sessionId: string | null; name: string }
-  | { type: 'create_room'; requestId: string; name?: string; password?: string }
+  | {
+      type: 'create_room';
+      requestId: string;
+      name?: string;
+      password?: string;
+      /** Omitted settings fall back to their defaults. */
+      settings?: Partial<RoomSettings>;
+    }
   | { type: 'join_room'; requestId: string; code: string; password?: string }
   | { type: 'list_rooms'; requestId: string }
   | { type: 'leave_room'; requestId: string }

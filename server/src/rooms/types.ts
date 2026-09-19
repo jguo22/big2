@@ -1,4 +1,4 @@
-import { MatchState, RoomPhase } from '@bigtwo/rules';
+import { MatchState, RoomPhase, RoomSettings } from '@bigtwo/rules';
 import { PasswordHash } from './password.js';
 
 /** A seated player as the server tracks them, including presence. */
@@ -22,6 +22,8 @@ export interface Room {
   hostId: string;
   /** Set when the host protected the room; `null` means the room is public. */
   password: PasswordHash | null;
+  /** Host-chosen advanced settings, already clamped to their legal range. */
+  settings: RoomSettings;
   phase: RoomPhase;
   players: ServerPlayer[];
   match: MatchState | null;

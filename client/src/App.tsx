@@ -1,3 +1,4 @@
+import { Box, Flex, Stack } from '@chakra-ui/react';
 import { ConnectionBanner } from './components/ConnectionBanner.js';
 import { GameScreen } from './screens/GameScreen.js';
 import { HomeScreen } from './screens/HomeScreen.js';
@@ -7,19 +8,34 @@ import { useGame } from './state/GameProvider.js';
 /** Picks the screen from the server's room state. There is no client router. */
 export function App() {
   const { room, status, error, dismissError } = useGame();
+  const banner = <ConnectionBanner status={status} error={error} onDismissError={dismissError} />;
+
+  // A running match takes the whole viewport; everything before it is a card
+  // centred on the felt.
+  if (room && room.phase !== 'lobby' && room.match) {
+    return <GameScreen room={room} banner={banner} />;
+  }
 
   return (
-    <main className="min-h-dvh bg-slate-950 px-4 py-6 text-slate-100 sm:px-6 sm:py-10">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
-        <ConnectionBanner status={status} error={error} onDismissError={dismissError} />
-        {!room ? (
-          <HomeScreen />
-        ) : room.phase === 'lobby' || !room.match ? (
-          <LobbyScreen room={room} />
-        ) : (
-          <GameScreen room={room} />
-        )}
-      </div>
-    </main>
+    <Flex
+      minH="100dvh"
+      align="center"
+      justify="center"
+      px={{ base: '16px', md: '24px' }}
+      py={{ base: '32px', md: '48px' }}
+      className="felt-pattern"
+    >
+      <Stack gap="14px" w="full" maxW={room ? '640px' : '440px'}>
+        {banner}
+        <Box
+          bg="bg.canvas"
+          borderRadius="24px"
+          boxShadow="lifted"
+          p={{ base: '24px', md: '32px' }}
+        >
+          {room ? <LobbyScreen room={room} /> : <HomeScreen />}
+        </Box>
+      </Stack>
+    </Flex>
   );
 }

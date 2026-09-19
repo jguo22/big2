@@ -1,5 +1,5 @@
 import { RoomView } from '@bigtwo/rules';
-import { Button, Heading, Text } from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
 import { useGame } from '../state/GameProvider.js';
 
 export interface ResultOverlayProps {
@@ -14,28 +14,36 @@ export function ResultOverlay({ room, winnerId }: ResultOverlayProps) {
   const youWon = winnerId === playerId;
 
   return (
-    <div
+    <Flex
       role="dialog"
       aria-modal="true"
       aria-labelledby="result-heading"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
+      position="fixed"
+      inset="0"
+      zIndex="50"
+      align="center"
+      justify="center"
+      p="16px"
+      bg="rgba(10, 34, 31, .6)"
+      backdropFilter="blur(3px)"
     >
-      <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-6 text-center">
-        <Heading id="result-heading" size="xl" className="text-slate-50">
-          {youWon ? 'You win!' : `${winner?.name ?? 'Someone'} wins`}
+      <Box w="full" maxW="380px" bg="bg.canvas" borderRadius="24px" boxShadow="lifted" p="32px" textAlign="center">
+        <Heading id="result-heading" fontFamily="heading" fontWeight="400" fontSize="40px" lineHeight="1">
+          {youWon ? 'You win' : `${winner?.name ?? 'Someone'} wins`}
         </Heading>
-        <Text className="mt-2 text-slate-400">
+        <Text mt="8px" fontSize="14px" color="fg.muted">
           {youWon ? 'You played your last card first.' : 'They played their last card first.'}
         </Text>
-        <div className="mt-6 flex flex-col gap-2">
-          <Button colorPalette="green" onClick={newMatch}>
+
+        <Stack gap="10px" mt="26px">
+          <Button colorPalette="brand" size="lg" h="50px" onClick={newMatch}>
             Back to lobby
           </Button>
-          <Button variant="ghost" onClick={leaveRoom}>
+          <Button colorPalette="forest" variant="ghost" onClick={leaveRoom}>
             Leave room
           </Button>
-        </div>
-      </div>
-    </div>
+        </Stack>
+      </Box>
+    </Flex>
   );
 }

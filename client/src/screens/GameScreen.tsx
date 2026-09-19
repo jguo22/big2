@@ -1,6 +1,6 @@
 import { beats, Card, detectCombination, RoomView } from '@bigtwo/rules';
-import { Button, Text } from '@chakra-ui/react';
-import { useEffect, useMemo, useState } from 'react';
+import { Button, Flex, Stack, Text } from '@chakra-ui/react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { ActionBar } from '../components/ActionBar.js';
 import { Hand } from '../components/Hand.js';
 import { SeatList } from '../components/SeatList.js';
@@ -10,10 +10,12 @@ import { ResultOverlay } from './ResultOverlay.js';
 
 export interface GameScreenProps {
   room: RoomView;
+  /** Connection and error banner, rendered by App so every screen shares one. */
+  banner: ReactNode;
 }
 
 /** The match view: seats, table, private hand and action controls. */
-export function GameScreen({ room }: GameScreenProps) {
+export function GameScreen({ room, banner }: GameScreenProps) {
   const { playerId, play, pass, leaveRoom } = useGame();
   const match = room.match!;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -27,10 +29,7 @@ export function GameScreen({ room }: GameScreenProps) {
   const you = room.players.find((player) => player.id === playerId);
   const isYourTurn = you !== undefined && you.seat === match.turnSeat && match.winnerId === null;
   const selectedCards = match.yourHand.filter((card) => selectedIds.includes(card.id));
-  const blockedReason = useMemo(
-    () => checkSelection(selectedCards, match),
-    [selectedCards, match],
-  );
+  const blockedReason = useMemo(() => checkSelection(selectedCards, match), [selectedCards, match]);
 
   const toggle = (card: Card) =>
     setSelectedIds((current) =>
@@ -38,39 +37,63 @@ export function GameScreen({ room }: GameScreenProps) {
     );
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <Text className="font-mono text-sm tracking-[0.2em] text-slate-400">{room.code}</Text>
-        <Button size="sm" variant="ghost" onClick={leaveRoom}>
-          Leave room
+    <Flex direction="column" minH="100dvh" className="felt-pattern">
+      <Flex
+        as="header"
+        w="full"
+        maxW="960px"
+        mx="auto"
+        px={{ base: '16px', md: '28px' }}
+        py={{ base: '12px', md: '18px' }}
+        align="center"
+        justify="space-between"
+        gap="12px"
+      >
+        <Text fontSize="13px" fontWeight="800" letterSpacing=".1em" color="fg.onFeltMuted">
+          {room.code}
+        </Text>
+        <Button
+          size="xs"
+          variant="ghost"
+          color="fg.onFelt"
+          borderColor="rgba(255,255,255,.28)"
+          _hover={{ bg: 'rgba(255,255,255,.14)' }}
+          onClick={leaveRoom}
+        >
+          Leave
         </Button>
-      </div>
+      </Flex>
 
-      <SeatList room={room} youId={playerId} />
-      <TableArea match={match} players={room.players} />
+      <Stack gap="14px" w="full" maxW="960px" mx="auto" px={{ base: '16px', md: '28px' }} flex="1">
+        {banner}
+        <SeatList room={room} youId={playerId} />
+        <TableArea match={match} players={room.players} />
+      </Stack>
 
-      <section aria-label="Your hand" className="rounded-2xl border border-slate-700 bg-slate-800/40 p-3">
-        <Hand
-          cards={match.yourHand}
-          selectedIds={selectedIds}
-          disabled={!isYourTurn}
-          onToggle={toggle}
+      <Stack
+        as="footer"
+        gap="12px"
+        w="full"
+        maxW="960px"
+        mx="auto"
+        px={{ base: '10px', md: '28px' }}
+        pb={{ base: '18px', md: '26px' }}
+        pt="6px"
+      >
+        <Hand cards={match.yourHand} selectedIds={selectedIds} disabled={!isYourTurn} onToggle={toggle} />
+        <ActionBar
+          isYourTurn={isYourTurn}
+          blockedReason={selectedIds.length === 0 ? 'Select cards to play.' : blockedReason}
+          selectionCount={selectedIds.length}
+          mustPlay={match.currentPlay === null}
+          onPlay={() => play(selectedIds)}
+          onPass={pass}
+          onClear={() => setSelectedIds([])}
         />
-        <div className="mt-3 border-t border-slate-700 pt-3">
-          <ActionBar
-            isYourTurn={isYourTurn}
-            blockedReason={selectedIds.length === 0 ? 'Select cards to play.' : blockedReason}
-            selectionCount={selectedIds.length}
-            mustPlay={match.currentPlay === null}
-            onPlay={() => play(selectedIds)}
-            onPass={pass}
-            onClear={() => setSelectedIds([])}
-          />
-        </div>
-      </section>
+      </Stack>
 
       {match.winnerId && <ResultOverlay room={room} winnerId={match.winnerId} />}
-    </div>
+    </Flex>
   );
 }
 

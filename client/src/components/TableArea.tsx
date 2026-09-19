@@ -1,4 +1,5 @@
 import { ComboCategory, PublicMatchState, PublicPlayer } from '@bigtwo/rules';
+import { Flex, Stack, Text } from '@chakra-ui/react';
 import { PlayingCard } from './PlayingCard.js';
 
 export interface TableAreaProps {
@@ -19,45 +20,59 @@ const CATEGORY_LABEL: Record<ComboCategory, string> = {
 
 /**
  * The centre of the table: the play that must currently be beaten, plus the
- * recent plays of this round for context.
+ * earlier plays of this round for context.
  */
 export function TableArea({ match, players }: TableAreaProps) {
   const nameOf = (playerId: string) => players.find((p) => p.id === playerId)?.name ?? 'Someone';
   const recent = match.history.filter((play) => play.roundIndex === match.roundIndex).slice(-4, -1);
 
   return (
-    <section
+    <Flex
+      as="section"
       aria-label="Table"
       aria-live="polite"
-      className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-2xl border border-slate-700 bg-slate-900/60 p-4"
+      direction="column"
+      align="center"
+      justify="center"
+      gap="12px"
+      flex="1"
+      minH={{ base: '150px', md: '200px' }}
+      borderWidth="1px"
+      borderColor="rgba(255,255,255,.18)"
+      borderRadius="24px"
+      bg="rgba(255,255,255,.04)"
+      px="16px"
+      py="20px"
     >
       {match.currentPlay ? (
         <>
-          <p className="text-sm text-slate-300">
-            <span className="font-medium text-slate-100">{nameOf(match.currentPlay.playerId)}</span> played{' '}
-            {CATEGORY_LABEL[match.currentPlay.category]}
-          </p>
-          <div className="flex flex-wrap justify-center gap-1.5">
+          <Text fontSize="13px" color="fg.onFeltMuted">
+            <Text as="span" fontWeight="800" color="fg.onFelt">
+              {nameOf(match.currentPlay.playerId)}
+            </Text>{' '}
+            played {CATEGORY_LABEL[match.currentPlay.category].toLowerCase()}
+          </Text>
+          <Flex gap="6px" wrap="wrap" justify="center">
             {match.currentPlay.cards.map((card) => (
-              <PlayingCard key={card.id} card={card} />
+              <PlayingCard key={card.id} card={card} size="sm" />
             ))}
-          </div>
+          </Flex>
         </>
       ) : (
-        <p className="text-sm text-slate-400">
-          Table is clear &mdash; the leading player may play any legal combination.
-        </p>
+        <Text fontSize="13px" color="fg.onFeltMuted" textAlign="center">
+          Table is clear — lead any legal combination.
+        </Text>
       )}
 
       {recent.length > 0 && (
-        <ol className="mt-1 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-slate-500">
+        <Stack as="ol" direction="row" gap="12px" wrap="wrap" justify="center" listStyleType="none">
           {recent.map((play, index) => (
-            <li key={`${play.playerId}-${index}`}>
-              {nameOf(play.playerId)}: {CATEGORY_LABEL[play.category]}
-            </li>
+            <Text as="li" key={`${play.playerId}-${index}`} fontSize="11px" color="rgba(255,255,255,.4)">
+              {nameOf(play.playerId)}: {CATEGORY_LABEL[play.category].toLowerCase()}
+            </Text>
           ))}
-        </ol>
+        </Stack>
       )}
-    </section>
+    </Flex>
   );
 }

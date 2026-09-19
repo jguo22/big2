@@ -1,12 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
+/* Colour, type and component styling live in the Chakra system (src/theme.ts).
+   This file carries only what Chakra cannot: the font import, and the felt
+   texture used behind the table. */
+
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-html,
-body,
-#root {
-  min-height: 100%;
-  background-color: #020617; /* slate-950, so overscroll matches the app */
+.felt-pattern {
+  background-color: #18534d;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+  background-position:
+    0 0,
+    12px 12px;
+  background-size: 24px 24px;
 }

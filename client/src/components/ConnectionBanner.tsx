@@ -1,3 +1,4 @@
+import { Button, Flex, Stack, Text } from '@chakra-ui/react';
 import { ConnectionStatus } from '../transport/connection.js';
 
 export interface ConnectionBannerProps {
@@ -12,26 +13,59 @@ const STATUS_TEXT: Partial<Record<ConnectionStatus, string>> = {
   offline: 'Connection lost. Retrying…',
 };
 
-/** Connection state and the most recent rejected action, if any. */
+/**
+ * Connection state and the most recent rejected action, if any. Sits on the
+ * felt above the card, so it carries its own light-on-dark colours.
+ */
 export function ConnectionBanner({ status, error, onDismissError }: ConnectionBannerProps) {
   const statusText = STATUS_TEXT[status];
   if (!statusText && !error) return null;
 
   return (
-    <div className="flex flex-col gap-2" role="status" aria-live="polite">
+    <Stack gap="8px" role="status" aria-live="polite">
       {statusText && (
-        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+        <Text
+          bg="rgba(0, 0, 0, 0.28)"
+          color="fg.onFelt"
+          borderRadius="pill"
+          px="16px"
+          py="9px"
+          fontSize="13px"
+          fontWeight="600"
+          textAlign="center"
+        >
           {statusText}
-        </p>
+        </Text>
       )}
       {error && (
-        <p className="flex items-start justify-between gap-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
-          <span>{error.message}</span>
-          <button type="button" onClick={onDismissError} className="shrink-0 underline" aria-label="Dismiss error">
+        <Flex
+          align="center"
+          justify="space-between"
+          gap="12px"
+          bg="brand.solid"
+          color="brand.contrast"
+          borderRadius="pill"
+          pl="16px"
+          pr="6px"
+          py="5px"
+        >
+          <Text fontSize="13px" fontWeight="600">
+            {error.message}
+          </Text>
+          <Button
+            onClick={onDismissError}
+            aria-label="Dismiss error"
+            variant="ghost"
+            size="xs"
+            borderRadius="pill"
+            color="brand.contrast"
+            fontWeight="800"
+            _hover={{ bg: 'rgba(255,255,255,.2)' }}
+          >
             Dismiss
-          </button>
-        </p>
+          </Button>
+        </Flex>
       )}
-    </div>
+    </Stack>
   );
 }

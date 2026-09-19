@@ -1,4 +1,8 @@
 import { Card, RANK_LABEL, SUIT_GLYPH } from '@bigtwo/rules';
+import { Box, chakra, Text } from '@chakra-ui/react';
+
+/** A real <button> with Chakra style props, so `type` and `disabled` type-check. */
+const CardButton = chakra('button');
 
 export type CardSize = 'sm' | 'md';
 
@@ -13,9 +17,16 @@ export interface PlayingCardProps {
   size?: CardSize;
 }
 
-const SIZE_CLASSES: Record<CardSize, string> = {
-  sm: 'h-16 w-11 text-sm sm:h-20 sm:w-14 sm:text-base',
-  md: 'h-24 w-16 text-lg sm:h-28 sm:w-20 sm:text-xl',
+const SIZES: Record<CardSize, { w: string; rank: string; suit: string }> = {
+  sm: { w: 'clamp(34px, 5vw, 46px)', rank: 'clamp(11px, 1.4vw, 14px)', suit: 'clamp(18px, 2.4vw, 24px)' },
+  md: { w: 'clamp(42px, 6.2vw, 68px)', rank: 'clamp(13px, 1.7vw, 20px)', suit: 'clamp(22px, 3vw, 38px)' },
+};
+
+const SUIT_NAMES: Record<Card['suit'], string> = {
+  S: 'Spades',
+  H: 'Hearts',
+  C: 'Clubs',
+  D: 'Diamonds',
 };
 
 /**
@@ -24,55 +35,69 @@ const SIZE_CLASSES: Record<CardSize, string> = {
  */
 export function PlayingCard({ card, selected, disabled, onToggle, size = 'md' }: PlayingCardProps) {
   const isRed = card.suit === 'H' || card.suit === 'D';
+  const metrics = SIZES[size];
   const label = `${RANK_LABEL[card.rank]} of ${SUIT_NAMES[card.suit]}`;
+  const ink = isRed ? 'coral' : 'ink';
 
   const face = (
     <>
-      <span className="absolute left-1 top-0.5 leading-tight">{RANK_LABEL[card.rank]}</span>
-      <span aria-hidden className="text-[1.6em] leading-none">
+      <Text position="absolute" top="5%" left="9%" fontFamily="heading" fontSize={metrics.rank} lineHeight=".9" color={ink}>
+        {RANK_LABEL[card.rank]}
+      </Text>
+      <Text
+        position="absolute"
+        inset="0"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        pt="12%"
+        fontSize={metrics.suit}
+        lineHeight="1"
+        color={ink}
+        aria-hidden
+      >
         {SUIT_GLYPH[card.suit]}
-      </span>
-      <span className="absolute bottom-0.5 right-1 rotate-180 leading-tight">{RANK_LABEL[card.rank]}</span>
+      </Text>
     </>
   );
 
-  const shell = [
-    'relative flex select-none items-center justify-center rounded-lg border bg-white font-semibold shadow-sm',
-    'border-slate-300 dark:border-slate-600 dark:bg-slate-100',
-    SIZE_CLASSES[size],
-    isRed ? 'text-rose-600' : 'text-slate-900',
-  ].join(' ');
+  const surface = {
+    w: metrics.w,
+    aspectRatio: '2 / 3',
+    bg: '#fffdf6',
+    borderWidth: '1px',
+    borderRadius: '7px',
+    position: 'relative' as const,
+    overflow: 'hidden' as const,
+    flex: '0 0 auto',
+  };
 
   if (!onToggle) {
     return (
-      <div className={shell} role="img" aria-label={label}>
+      <Box {...surface} borderColor="border.subtle" boxShadow="0 4px 10px rgba(7,39,36,.18)" role="img" aria-label={label}>
         {face}
-      </div>
+      </Box>
     );
   }
 
   return (
-    <button
+    <CardButton
       type="button"
       aria-label={label}
       aria-pressed={selected ?? false}
       disabled={disabled}
       onClick={() => onToggle(card)}
-      className={[
-        shell,
-        'transition-transform duration-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-        disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:-translate-y-1',
-        selected ? '-translate-y-4 ring-2 ring-emerald-500' : '',
-      ].join(' ')}
+      {...surface}
+      borderColor={selected ? 'coral' : 'border.subtle'}
+      boxShadow={selected ? '0 10px 20px rgba(7,39,36,.28)' : '0 4px 10px rgba(7,39,36,.18)'}
+      opacity={disabled ? 0.45 : 1}
+      cursor={disabled ? 'not-allowed' : 'pointer'}
+      transform={selected ? 'translateY(-16px)' : 'translateY(0)'}
+      transition="transform .16s ease-out, box-shadow .16s ease-out"
+      _hover={disabled ? undefined : { transform: selected ? 'translateY(-16px)' : 'translateY(-7px)' }}
+      _focusVisible={{ outline: '2px solid', outlineColor: 'coral', outlineOffset: '2px' }}
     >
       {face}
-    </button>
+    </CardButton>
   );
 }
-
-const SUIT_NAMES: Record<Card['suit'], string> = {
-  S: 'Spades',
-  H: 'Hearts',
-  C: 'Clubs',
-  D: 'Diamonds',
-};

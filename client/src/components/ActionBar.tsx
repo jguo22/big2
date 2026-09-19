@@ -1,4 +1,4 @@
-import { Button } from '@chakra-ui/react';
+import { Button, Flex, Text } from '@chakra-ui/react';
 
 export interface ActionBarProps {
   /** Whether it is the local player's turn. */
@@ -26,6 +26,7 @@ export function ActionBar({
   onPass,
   onClear,
 }: ActionBarProps) {
+  const blocked = Boolean(blockedReason) && isYourTurn && selectionCount > 0;
   const status = !isYourTurn
     ? 'Waiting for the other players…'
     : selectionCount === 0
@@ -33,30 +34,46 @@ export function ActionBar({
       : (blockedReason ?? 'Ready to play.');
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <p
-        aria-live="polite"
-        className={`text-sm ${blockedReason && isYourTurn && selectionCount > 0 ? 'text-amber-400' : 'text-slate-400'}`}
-      >
+    <Flex direction={{ base: 'column', sm: 'row' }} align="center" justify="space-between" gap="10px" w="full">
+      <Text aria-live="polite" fontSize="13px" fontWeight="600" color={blocked ? 'coral' : 'fg.onFeltMuted'}>
         {status}
-      </p>
-      <div className="flex gap-2">
-        <Button variant="ghost" onClick={onClear} disabled={selectionCount === 0}>
+      </Text>
+
+      <Flex gap="8px">
+        <Button
+          variant="ghost"
+          size="sm"
+          color="fg.onFeltMuted"
+          borderColor="rgba(255,255,255,.22)"
+          _hover={{ bg: 'rgba(255,255,255,.12)', color: 'fg.onFelt' }}
+          onClick={onClear}
+          disabled={selectionCount === 0}
+        >
           Clear
         </Button>
         <Button
-          colorPalette="gray"
-          variant="outline"
+          variant="ghost"
+          size="sm"
+          px="22px"
+          color="fg.onFelt"
+          borderColor="rgba(255,255,255,.35)"
+          _hover={{ bg: 'rgba(255,255,255,.14)' }}
           onClick={onPass}
           disabled={!isYourTurn || mustPlay}
           title={mustPlay ? 'You are leading and must play' : undefined}
         >
           Pass
         </Button>
-        <Button colorPalette="green" onClick={onPlay} disabled={!isYourTurn || blockedReason !== null}>
+        <Button
+          colorPalette="brand"
+          size="sm"
+          px="26px"
+          onClick={onPlay}
+          disabled={!isYourTurn || blockedReason !== null}
+        >
           Play {selectionCount > 0 ? `(${selectionCount})` : ''}
         </Button>
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }

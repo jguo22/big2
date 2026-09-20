@@ -1,0 +1,19 @@
+[Unit]
+Description=Big Two game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/bigtwo
+Environment=NODE_ENV=production
+Environment=PORT=8080
+# Rooms and sessions snapshot here, so the path must outlive a deploy.
+Environment=BIGTWO_STATE_PATH=/home/ec2-user/bigtwo/.data/state.json
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

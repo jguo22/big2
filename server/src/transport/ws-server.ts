@@ -33,13 +33,14 @@ interface Connection {
  * the affected room is re-broadcast to each of its players, redacted per player.
  *
  * Params:
- *   httpServer: server to attach to; upgrades on any path.
+ *   httpServer: server to attach to; upgrades on `/ws` only, leaving every
+ *     other path to the HTTP handler.
  *   rooms: the room service holding authoritative state.
  * Returns: a `close` function that stops the heartbeat and shuts the socket
  *   server down.
  */
 export function attachGameSocket(httpServer: HttpServer, rooms: RoomService): () => Promise<void> {
-  const wss = new WebSocketServer({ server: httpServer });
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const connections = new Map<WebSocket, Connection>();
   const socketsBySession = new Map<string, Set<WebSocket>>();
   const requestCache = new Map<string, Map<string, ServerMessage>>();

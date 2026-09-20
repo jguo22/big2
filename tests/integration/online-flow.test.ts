@@ -28,7 +28,7 @@ class TestClient {
 
   /** Connects, sends `hello`, and resolves once the server has issued a session. */
   static async connect(port: number, name: string): Promise<TestClient> {
-    const socket = new WebSocket(`ws://127.0.0.1:${port}`);
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/ws`);
     const client = new TestClient(socket);
     socket.on('message', (raw) => client.received.push(JSON.parse(raw.toString()) as ServerMessage));
     await new Promise<void>((resolve, reject) => {
@@ -236,7 +236,7 @@ describe('online room flow', () => {
     const sessionMessage = client.received.find(
       (message): message is Extract<ServerMessage, { type: 'welcome' }> => message.type === 'welcome',
     )!;
-    const socket = new WebSocket(`ws://127.0.0.1:${server.port}`);
+    const socket = new WebSocket(`ws://127.0.0.1:${server.port}/ws`);
     await new Promise<void>((resolve) => socket.once('open', () => resolve()));
     const messages: ServerMessage[] = [];
     socket.on('message', (raw) => messages.push(JSON.parse(raw.toString()) as ServerMessage));

@@ -9,6 +9,7 @@
     "dev:server": "npm run dev --workspace @bigtwo/server",
     "dev:client": "npm run dev --workspace @bigtwo/client",
     "build": "npm run build --workspace @bigtwo/client",
+    "start": "npm run start --workspace @bigtwo/server",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "npm run typecheck --workspaces"

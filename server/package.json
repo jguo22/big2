@@ -6,17 +6,17 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "start": "NODE_ENV=production tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@bigtwo/rules": "*",
+    "tsx": "^4.19.2",
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@types/ws": "^8.5.13",
-    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
 }

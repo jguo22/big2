@@ -5,9 +5,14 @@ import { ConnectionStatus, GameConnection } from '../transport/connection.js';
 const SESSION_KEY = 'bigtwo.sessionId';
 const NAME_KEY = 'bigtwo.name';
 
+// In production the server serves this page too, so the socket lives at /ws on
+// the same origin. In development Vite serves the page on its own port, so the
+// socket has to be addressed on the server's.
 const WS_URL: string =
   (import.meta.env.VITE_WS_URL as string | undefined) ??
-  `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:8080`;
+  (import.meta.env.DEV
+    ? `ws://${location.hostname}:8080/ws`
+    : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
 
 export interface ServerError {
   readonly code: string;

@@ -8,15 +8,15 @@
  * the product.
  *
  * Rooms are created over WebSocket rather than HTTP because that is the only
- * way to create one — the server's sole HTTP route is /health.
+ * way to create one — the server exposes no HTTP route for it.
  *
  * Needs Node 22+ for the global WebSocket. Run it against a live server:
  *
  *   node scripts/seed-rooms.mjs
- *   BIGTWO_WS_URL=ws://127.0.0.1:9000 node scripts/seed-rooms.mjs
+ *   BIGTWO_WS_URL=ws://127.0.0.1:9000/ws node scripts/seed-rooms.mjs
  */
 
-const URL = process.env.BIGTWO_WS_URL ?? 'ws://127.0.0.1:8080';
+const URL = process.env.BIGTWO_WS_URL ?? 'ws://127.0.0.1:8080/ws';
 const TIMEOUT_MS = 5000;
 
 /**

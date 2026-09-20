@@ -2,8 +2,8 @@
 @import 'tailwindcss';
 
 /* Colour, type and component styling live in the Chakra system (src/theme.ts).
-   This file carries only what Chakra cannot: the font import, and the felt
-   texture used behind the table. */
+   This file carries only what Chakra cannot: the font import, the felt
+   texture used behind the table, and keyframes. */
 
 :root {
   color-scheme: light;
@@ -18,4 +18,26 @@
     0 0,
     12px 12px;
   background-size: 24px 24px;
+}
+
+/* The plaque's own transform is free: its parent handles the centring. */
+.winner-plaque {
+  animation: winner-rise 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+@keyframes winner-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .winner-plaque {
+    animation: none;
+  }
 }

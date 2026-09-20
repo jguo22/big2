@@ -52,12 +52,18 @@ export function TableArea({ match, passedSeats, playerPositions, seatPositions, 
   );
 }
 
+/** The height of a played card row; plays are inset 8px from the table edge. */
+const CARD_ROW_HEIGHT = { base: '76px', md: '100px' };
+
+/** Distance from the table edge to the centre of a played card row. */
+const PLAY_CENTER = { base: '46px', md: '58px' };
+
 function PassMarker({ position }: { position: PlayPosition }) {
   const anchor = {
-    top: { top: '8px', left: '50%', transform: 'translateX(-50%)' },
+    top: { top: PLAY_CENTER, left: '50%', transform: 'translate(-50%, -50%)' },
     left: { top: '50%', left: '8px', transform: 'translateY(-50%)' },
     right: { top: '50%', right: '8px', transform: 'translateY(-50%)' },
-    bottom: { bottom: '8px', left: '50%', transform: 'translateX(-50%)' },
+    bottom: { bottom: PLAY_CENTER, left: '50%', transform: 'translate(-50%, 50%)' },
   }[position];
 
   return (
@@ -107,7 +113,7 @@ function StackedPlay({ play, position, isCurrent, depth }: StackedPlayProps) {
       opacity={isCurrent ? 1 : 0.48}
       transition="transform .2s, opacity .2s"
     >
-      <Flex justify="center" h={{ base: '76px', md: '100px' }}>
+      <Flex justify="center" h={CARD_ROW_HEIGHT}>
         {play.cards.map((card, index) => (
           <Box key={card.id} ml={index === 0 ? '0' : { base: '-12px', md: '-17px' }} zIndex={index}>
             <PlayingCard card={card} variant="played" />

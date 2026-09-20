@@ -38,12 +38,18 @@ export function GameScreen({ room }: GameScreenProps) {
   const match = room.match!;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [resultDismissed, setResultDismissed] = useState(false);
 
   // Any state change from the server (a play, a pass, a new round) invalidates
   // the selection, which may no longer be legal or even in hand.
   useEffect(() => {
     setSelectedIds([]);
   }, [match.history.length, match.roundIndex]);
+
+  // A new match brings the overlay back the next time someone wins.
+  useEffect(() => {
+    setResultDismissed(false);
+  }, [match.winnerId]);
 
   const you = room.players.find((player) => player.id === playerId);
   const isYourTurn = you !== undefined && you.seat === match.turnSeat && match.winnerId === null;
@@ -70,10 +76,23 @@ export function GameScreen({ room }: GameScreenProps) {
         justify="space-between"
         gap="12px"
       >
-        <Text fontSize="12px" fontWeight="800" letterSpacing=".1em" color="whiteAlpha.700">
+        <Text fontSize="18px" fontWeight="800" letterSpacing=".1em" color="whiteAlpha.700">
           {room.code}
         </Text>
         <Flex align="center" gap="8px">
+          {match.winnerId && resultDismissed && (
+            <Button
+              onClick={() => setResultDismissed(false)}
+              variant="ghost"
+              size="sm"
+              fontSize="12px"
+              color="white"
+              borderColor="whiteAlpha.300"
+              _hover={{ bg: 'whiteAlpha.200' }}
+            >
+              Result
+            </Button>
+          )}
           <Button
             onClick={() => setHistoryOpen((open) => !open)}
             aria-expanded={historyOpen}
@@ -186,6 +205,52 @@ export function GameScreen({ room }: GameScreenProps) {
             onPass={pass}
           />
         </Box>
+
+        {/* Centred on the table so the winner stays on screen while the
+            finished hand is reviewed; clicks pass through to the table. */}
+        {match.winnerId && (
+          <Box
+            position="absolute"
+            top="50%"
+            left="50%"
+            transform="translate(-50%, -50%)"
+            zIndex={GAME_LAYERS.chrome}
+            pointerEvents="none"
+          >
+            <Flex
+              className="winner-plaque"
+              direction="column"
+              align="center"
+              bg="bg.canvas"
+              borderWidth="1px"
+              borderColor="coral"
+              borderRadius="card"
+              boxShadow="lifted"
+              outline="1px solid"
+              outlineColor="rgba(232, 110, 75, .35)"
+              outlineOffset="6px"
+              px={{ base: '30px', md: '48px' }}
+              py={{ base: '18px', md: '24px' }}
+            >
+              <Text fontSize="10px" fontWeight="800" letterSpacing=".3em" color="brand.fg">
+                WINNER
+              </Text>
+              <Text
+                fontFamily="heading"
+                fontSize={{ base: '32px', md: '44px' }}
+                lineHeight="1.15"
+                whiteSpace="nowrap"
+              >
+                {match.winnerId === playerId
+                  ? 'You win'
+                  : `${room.players.find((player) => player.id === match.winnerId)?.name ?? 'Someone'} wins`}
+              </Text>
+              <Text mt="4px" fontSize="11px" letterSpacing=".45em" color="fg.subtle">
+                ♠♥♦♣
+              </Text>
+            </Flex>
+          </Box>
+        )}
       </Box>
 
       {/* Full-bleed so the panel anchors to the window edge; clicks pass
@@ -200,7 +265,9 @@ export function GameScreen({ room }: GameScreenProps) {
         </Box>
       )}
 
-      {match.winnerId && <ResultOverlay room={room} winnerId={match.winnerId} />}
+      {match.winnerId && !resultDismissed && (
+        <ResultOverlay room={room} winnerId={match.winnerId} onDismiss={() => setResultDismissed(true)} />
+      )}
     </Box>
   );
 }
@@ -235,7 +302,7 @@ function checkSelection(selected: readonly Card[], match: RoomView['match']): st
   if (!match || selected.length === 0) return 'Select cards to play.';
 
   const combination = detectCombination(selected);
-  if (!combination) return 'That is not a legal combination.';
+  if (!combination) return 'This is not a legal combination.';
 
   const isOpeningPlay = match.history.length === 0;
   if (isOpeningPlay && match.startingCardId && !selected.some((card) => card.id === match.startingCardId)) {
@@ -247,7 +314,7 @@ function checkSelection(selected: readonly Card[], match: RoomView['match']): st
     const current = detectCombination(match.currentPlay.cards);
     if (!current) return null;
     if (combination.size !== current.size) return `You must play exactly ${current.size} card(s).`;
-    if (!beats(combination, current)) return 'That does not beat the current play.';
+    if (!beats(combination, current)) return 'This does not beat the current play.';
   }
   return null;
 }

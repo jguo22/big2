@@ -86,9 +86,26 @@ VITE_WS_URL=wss://game.example.com/ws npm run build
 
 ## Deploy to EC2
 
-Open port 8080 to the world in the instance's security group, and **allocate
-an Elastic IP** — a stopped instance otherwise comes back on a different
-address.
+**Allocate an Elastic IP** — a stopped instance otherwise comes back on a
+different address.
+
+**Open port 8080** in the instance's security group, or the page stays
+unreachable from outside the box however healthy the service is. In the
+console: EC2 → Instances → the instance → Security → the security group →
+Edit inbound rules → Add rule → Custom TCP, port `8080`, source `0.0.0.0/0`.
+Since the page and the socket share an origin, that is the only port that has
+to be open.
+
+A closed port and a server that never started look identical from a browser.
+To tell them apart:
+
+```sh
+ssh <host> 'curl -s localhost:8080/health; systemctl is-active bigtwo'
+```
+
+`{"ok":true}` and `active` mean the server is fine and the security group is
+what is blocking you. Anything else is the service itself, and
+`journalctl -u bigtwo -n 50` says why.
 
 Once, on a fresh instance:
 
@@ -100,6 +117,30 @@ That installs Node, npm and rsync — via `dnf` or `apt-get`, whichever the box
 has — and installs the systemd unit, rewritten for the user and directory you
 deploy as, so `ubuntu` works as well as `ec2-user`. It leaves the service
 enabled but not started, since the first deploy is what starts it.
+
+**Then upgrade Node.** Either package manager installs whatever its
+distribution pins, which on Amazon Linux 2023 is Node 18 — end of life since
+April 2025, and older than several packages in the lockfile ask for:
+
+```sh
+ssh <host>
+sudo dnf install -y nodejs22 nodejs22-npm   # add --allowerasing if it balks
+node --version
+sudo systemctl restart bigtwo
+```
+
+Node 22 conflicts with the `nodejs18` packages, so `dnf` swaps them out and
+repoints `/usr/bin/node` and `/usr/bin/npm` — the path the unit's
+`ExecStart=/usr/bin/npm start` resolves, and one a non-interactive shell finds,
+which an `nvm` install would not be. The restart is what moves the running
+service onto the new binary. On a Debian or Ubuntu box the equivalent is a
+NodeSource repository, since `apt-get` has no versioned Node package names.
+
+The `EBADENGINE` warnings a deploy prints are this same version gap, and they
+are harmless in themselves: every package that asks for Node 20+ is client
+build tooling that only ever runs on your machine. `npm` checks engines
+against the whole resolved lockfile before pruning dev dependencies, so it
+warns about packages it then does not install.
 
 Then deploy from your machine:
 

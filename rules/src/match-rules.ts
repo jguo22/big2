@@ -31,8 +31,6 @@ export interface MatchState {
   readonly passedSeats: readonly number[];
   readonly history: readonly PlayRecord[];
   readonly roundIndex: number;
-  /** Seat that opened this round; also the boundary for clearing displayed actions. */
-  readonly roundLeaderSeat: number;
   readonly visiblePlays: readonly PlayRecord[];
   readonly visiblePassedSeats: readonly number[];
   /** Card the very first play of the match must contain, or `null` if none applies. */
@@ -111,7 +109,6 @@ export function createMatch(playerIds: readonly string[], rng?: Rng): MatchState
     passedSeats: [],
     history: [],
     roundIndex: 0,
-    roundLeaderSeat: seat,
     visiblePlays: [],
     visiblePassedSeats: [],
     startingCardId,
@@ -229,9 +226,7 @@ export function pass(state: MatchState, playerId: string): ActionResult {
         passedSeats: [],
         roundIndex: state.roundIndex + 1,
         turnSeat: state.currentPlay.seat,
-        roundLeaderSeat: state.currentPlay.seat,
-        visiblePlays: [],
-        visiblePassedSeats: [],
+        ...tableDisplay(state, state.currentPlay.seat, null),
       },
     };
   }
@@ -247,20 +242,12 @@ export function pass(state: MatchState, playerId: string): ActionResult {
   };
 }
 
-/** Keep each seat's action until the turn completes a lap back to the round leader. */
+/** Replace the acting seat's action, then clear the seat whose turn is starting. */
 function tableDisplay(state: MatchState, turnSeat: number, play: PlayRecord | null, matchOver = false) {
-  const currentPlay = play ?? state.currentPlay;
-  if (!matchOver && turnSeat === state.roundLeaderSeat) {
-    // The active hand still needs to be visible so the leader knows what to beat.
-    return { visiblePlays: currentPlay ? [currentPlay] : [], visiblePassedSeats: [] };
-  }
+  const keepSeat = (seat: number) => seat !== state.turnSeat && (matchOver || seat !== turnSeat);
   return {
-    visiblePlays: play
-      ? [...state.visiblePlays.filter((previous) => previous.seat !== play.seat), play]
-      : state.visiblePlays,
-    visiblePassedSeats: play
-      ? state.visiblePassedSeats.filter((seat) => seat !== play.seat)
-      : [...state.visiblePassedSeats, state.turnSeat],
+    visiblePlays: [...state.visiblePlays.filter((previous) => keepSeat(previous.seat)), ...(play ? [play] : [])],
+    visiblePassedSeats: [...state.visiblePassedSeats.filter(keepSeat), ...(play ? [] : [state.turnSeat])],
   };
 }
 

@@ -54,11 +54,10 @@ export class RoomService {
         const match = room.match;
         room.match = {
           ...match,
-          roundLeaderSeat: match.roundLeaderSeat
-            ?? match.history.find((play) => play.roundIndex === match.roundIndex)?.seat
-            ?? match.turnSeat,
-          visiblePlays: match.visiblePlays ?? (match.currentPlay ? [match.currentPlay] : []),
-          visiblePassedSeats: match.visiblePassedSeats ?? match.passedSeats,
+          visiblePlays: (match.visiblePlays ?? (match.currentPlay ? [match.currentPlay] : []))
+            .filter((play) => match.winnerId !== null || play.seat !== match.turnSeat),
+          visiblePassedSeats: (match.visiblePassedSeats ?? match.passedSeats)
+            .filter((seat) => match.winnerId !== null || seat !== match.turnSeat),
         };
       }
       this.rooms.set(room.code, room);

@@ -14,8 +14,7 @@ export interface TableAreaProps {
 }
 
 /**
- * Each seat's plays stay visible until the turn returns to the round leader.
- * The active hand remains at full size so players can see what they must beat.
+ * Each seat's action stays visible until that player's next turn starts.
  */
 export function TableArea({ match, passedSeats, playerPositions, seatPositions, isYourTurn }: TableAreaProps) {
   const recent = match.visiblePlays;
@@ -30,22 +29,21 @@ export function TableArea({ match, passedSeats, playerPositions, seatPositions, 
       h="full"
       minH={{ base: '112px', md: '148px' }}
     >
-      {match.currentPlay ? (
-        <Box position="absolute" inset="0">
-          {recent.map((play, index) => (
-            <StackedPlay
-              key={`${play.playerId}-${play.roundIndex}-${index}`}
-              play={play}
-              position={playerPositions.get(play.playerId) ?? 'top'}
-              isCurrent={index === recent.length - 1}
-              depth={index}
-            />
-          ))}
-          {passedSeats.map((seat) => (
-            <PassMarker key={seat} position={seatPositions.get(seat) ?? 'top'} />
-          ))}
-        </Box>
-      ) : (
+      <Box position="absolute" inset="0">
+        {recent.map((play, index) => (
+          <StackedPlay
+            key={`${play.playerId}-${play.roundIndex}-${index}`}
+            play={play}
+            position={playerPositions.get(play.playerId) ?? 'top'}
+            isCurrent={play.seat === match.currentPlay?.seat}
+            depth={index}
+          />
+        ))}
+        {passedSeats.map((seat) => (
+          <PassMarker key={seat} position={seatPositions.get(seat) ?? 'top'} />
+        ))}
+      </Box>
+      {!match.currentPlay && (
         <Text position="absolute" inset="0" display="flex" alignItems="center" justifyContent="center" color="whiteAlpha.500" fontSize="13px" textAlign="center">
           {isYourTurn ? 'Choose cards from your hand to lead' : 'Waiting for the next play'}
         </Text>

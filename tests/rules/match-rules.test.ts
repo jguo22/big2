@@ -147,11 +147,10 @@ describe('turn and play validation', () => {
 });
 
 describe('rounds', () => {
-  it('retains plays and passes until the round leader acts again, keeping the hand to beat', () => {
+  it('clears only the incoming player’s display and shows a pass from the first player', () => {
     let state: MatchState = {
       ...createMatch(PLAYERS, seededRng(1)),
       turnSeat: 0,
-      roundLeaderSeat: 0,
       hands: Object.fromEntries([
         ['p0', ['3D', '7D', 'JD']],
         ['p1', ['4D', '8D', 'QD']],
@@ -169,20 +168,26 @@ describe('rounds', () => {
     state = expectOk(pass(state, 'p3'));
     expect(state.turnSeat).toBe(0);
     expect(state.visiblePlays).toEqual([state.currentPlay]);
-    expect(state.visiblePassedSeats).toEqual([]);
+    expect(state.visiblePassedSeats).toEqual([1, 3]);
     // Display clearing must not reset the consecutive passes used by the rules.
     expect(state.passedSeats).toEqual([3]);
 
-    state = expectOk(playCards(state, 'p0', ['7D']));
+    state = expectOk(pass(state, 'p0'));
+    expect(state.visiblePassedSeats).toEqual([3, 0]);
+    expect(state.visiblePlays.map((play) => play.playerId)).toEqual(['p2']);
     state = expectOk(playCards(state, 'p1', ['8D']));
+    expect(state.turnSeat).toBe(2);
+    expect(state.visiblePlays.map((play) => play.playerId)).toEqual(['p1']);
+    expect(state.visiblePassedSeats).toEqual([3, 0]);
     state = expectOk(playCards(state, 'p2', ['9D']));
-    expect(state.visiblePlays.map((play) => play.playerId)).toEqual(['p0', 'p1', 'p2']);
+    expect(state.visiblePlays.map((play) => play.playerId)).toEqual(['p1', 'p2']);
+    expect(state.visiblePassedSeats).toEqual([0]);
     state = expectOk(playCards(state, 'p3', ['TD']));
-    expect(state.visiblePlays).toEqual([state.currentPlay]);
+    expect(state.visiblePlays.map((play) => play.playerId)).toEqual(['p1', 'p2', 'p3']);
     expect(state.visiblePassedSeats).toEqual([]);
   });
 
-  it('clears the table and returns the lead when everyone else passes', () => {
+  it('clears the leader’s cards but preserves pass markers when everyone else passes', () => {
     let state = createMatch(PLAYERS, seededRng(1));
     const leader = playerAt(state, state.turnSeat);
     state = expectOk(playCards(state, leader, ['3D']));
@@ -194,8 +199,8 @@ describe('rounds', () => {
     expect(state.passedSeats).toEqual([]);
     expect(state.roundIndex).toBe(1);
     expect(state.visiblePlays).toEqual([]);
-    expect(state.visiblePassedSeats).toEqual([]);
-    expect(state.roundLeaderSeat).toBe(state.turnSeat);
+    expect(state.visiblePassedSeats).toHaveLength(3);
+    expect(state.visiblePassedSeats).not.toContain(state.turnSeat);
     expect(playerAt(state, state.turnSeat)).toBe(leader);
   });
 });
@@ -227,6 +232,10 @@ describe('full match simulation', () => {
       const actor = playerAt(state, state.turnSeat);
       const move = botMove(state, actor);
       state = expectOk(move ? playCards(state, actor, move) : pass(state, actor));
+      if (!state.winnerId) {
+        expect(state.visiblePlays.some((play) => play.seat === state.turnSeat)).toBe(false);
+        expect(state.visiblePassedSeats).not.toContain(state.turnSeat);
+      }
     }
 
     expect(state.winnerId).not.toBeNull();
